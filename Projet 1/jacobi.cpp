@@ -12,15 +12,15 @@
 using namespace std;
 
 // Paramètres du domaine et de la discrétisation
-double a,b;          // domaine d'étude [0,a]\times[0,b]
-double U0 = 1;     // Conditions aux bords 1
-double alpha = 0.5;    // Conditions aux bords 2
+double a, b;         // Domaine d'étude (0,a)x(0,b)
+double U0 = 1;       // Conditions aux bords 1
+double alpha = 0.5;  // Conditions aux bords 2
 
-int Nt,Nx,Ny;        // # pas de temps, # pas d'espace horizontal, # pas d'espace vertical
-double dx;           // pas d'espace horizontal
-double dy;           // pas d'espace vertical
-double dt;           // pas de temps
-int Nmax = 100000;     // nombre d'itérations max de l'algorithme
+int Nx, Ny;          // # pas d'espace horizontal, # pas d'espace vertical
+double dx;           // Pas d'espace horizontal
+double dy;           // Pas d'espace vertical
+int Nmax = 10000;     // Nombre d'itérations max de l'algorithme
+double tol = 1e-6;   // Tolérance de l'algorithme (critère d'arrêt)
 
 
 // Second membre de l'équation de Poisson
@@ -29,9 +29,9 @@ double f(double x, double y)
     return 0;
 }
 
+// Conditions aux limites
 double V(double y, const double b)
 {
-    // Conditions aux limites (coin en haut à gauche)
     return 1 - cos(2*M_PI*y/b);
 }
 
@@ -51,6 +51,8 @@ int main(int argc, char* argv[])
 
     dx = a/(Nx+1);
     dy = b/(Ny+1);
+
+    double cst = 1/(2/(dx*dx) + 2/(dy*dy));
 
     if (a <= 0) {
         cout << "a doit être strictement positif!" << endl;
@@ -78,25 +80,36 @@ int main(int argc, char* argv[])
         u[j] = U0 * (1.0 + alpha*V(y[j], b));   // gauche du domaine
     }
 
-
-    vector<double> uNew((Nx+2)*(Ny+2), 0.0);
+    vector<double> uNew = u;
     // Schéma
-    for (int l=0; l<Nmax; l++) {
+    int iteration = 0;              // Nombre d'itérations
+    double laplacien;               // Laplacien approché
+    double maxResidu = tol + 1.0;   // Norme infinie du résidu
+    double residu;                  // Résidu || Ax^l - b
+    while (iteration < Nmax && maxResidu > tol) {
+        maxResidu = 0.0;
         for (int i=1; i<Nx+1; i++) {
             for (int j=1; j<Ny+1; j++) {
-                uNew[i*(Ny+2) + j] = 0.25 * ( u[(i+1)*(Ny+2) + j] + u[(i-1)*(Ny+2) + j] + u[i*(Ny+2) + j+1] + u[i*(Ny+2) + j-1] ) - 0.25 * dx*dx * f(x[i], y[j]); 
+                // Mise à jour
+                uNew[i*(Ny+2) + j] = cst * ( 1/(dx*dx) * (u[(i+1)*(Ny+2) + j] + u[(i-1)*(Ny+2) + j]) + 1/(dy*dy) * (u[i*(Ny+2) + j+1] + u[i*(Ny+2) + j-1]) - f(x[i], y[j]));
+                
+                // Calcul de la norme du résidu
+                laplacien = 1/(dx*dx) * (u[(i+1)*(Ny+2) + j] - 2*u[i*(Ny+2) + j] + u[(i-1)*(Ny+2) + j]) + 1/(dy*dy) * (u[(i*(Ny+2) + j+1)] - 2*u[i*(Ny+2) + j] + u[i*(Ny+2) + j-1]);
+                residu = abs( laplacien - f(x[i], y[j]));
+                maxResidu = max(maxResidu, residu);
             }
         }
         u.swap(uNew);
-        if (l == 0 || l == 1 || l == 10 || l == Nmax-1) {
-            cout << "Itération " << l << " échantillon points intérieurs/extérieurs:" << endl;
-            for (int i = 1; i <= 3; i++) {
-                for (int j = 1; j <= 3; j++) {
-                    cout << "u[" << i << "," << j << "] = " << u[i*(Ny+2) + j] << "  ";
-                }
-            cout << endl;
-            }
-        }   
+        iteration++;
+        // Suivi de la convergence
+        if (iteration == 1 || iteration % 500 == 0 || iteration == Nmax) {
+            cout << "Itération " << iteration << ", résidu max: " << maxResidu << endl;
+        }
+    }
+
+    if (maxResidu <= tol) {
+        cout << "Convergence après " << iteration << " itérations." << endl;
+        cout << "Résidu max final: " << maxResidu << "." << endl;
     }
 
 
@@ -108,9 +121,7 @@ int main(int argc, char* argv[])
             myfile << u[i*(Ny+2) + j] << "\n";
         }
     }
-    // for (int k=0; k<(Nx+2)*(Ny+2); k++) {
-    //     myfile << u[k] << "\n";
-    // }
     myfile.close();
+    cout << "Sauvegarde dans u_sol.txt effectuée." << endl;
     return 0;
 }
