@@ -4,21 +4,21 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib import cm
 
-Ny=100; Nx=100
-a=1;    b=1
+Nx, Ny = 100, 100
+a, b = 1, 1
 
-X = np.linspace(0, a, Nx+1)
-Y = np.linspace(0, b, Ny+1)
-X, Y = np.meshgrid(X, Y)
+x = np.linspace(0, a, Nx+2)
+y = np.linspace(0, b, Ny+2)
+X, Y = np.meshgrid(x, y)
 
 f = open("U_sol.txt", "r")
 lines = f.readlines()
 
-U=np.zeros((Nx+1,Ny+1))
+U=np.zeros((Nx+2,Ny+2))
 
-for i in range(Nx+1):
-    for j in range(Ny+1):
-        U[i,j] = (float(lines[i*Ny+j]))
+for i in range(Nx+2):
+    for j in range(Ny+2):
+        U[i,j] = (float(lines[i*(Ny+2)+j]))
 
 
 fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
