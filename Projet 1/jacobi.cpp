@@ -19,14 +19,22 @@ double alpha = 0.5;  // Conditions aux bords 2
 int Nx, Ny;          // # pas d'espace horizontal, # pas d'espace vertical
 double dx;           // Pas d'espace horizontal
 double dy;           // Pas d'espace vertical
-int Nmax = 10000;     // Nombre d'itérations max de l'algorithme
+int Nmax = 100000;   // Nombre d'itérations max de l'algorithme
 double tol = 1e-6;   // Tolérance de l'algorithme (critère d'arrêt)
+
+
+// Solution particulière régulière (pour la validation du code)
+double u_ex(double x, double y)
+{
+    return sin(M_PI*x/a)*sin(M_PI*y/b);
+}
 
 
 // Second membre de l'équation de Poisson
 double f(double x, double y)
 {
-    return 0;
+    return -M_PI*M_PI * (1/(a*a) + 1/(b*b)) * u_ex(x, y);
+    //return 0;
 }
 
 // Conditions aux limites
@@ -71,21 +79,25 @@ int main(int argc, char* argv[])
     // Initilisation
     vector<double> u( (Nx+2)*(Ny+2), U0);
     for (int i=0; i<Nx+2; i++) {
-        u[i*(Ny+2)] = U0;                       // bas du domaine
-        u[i*(Ny+2)+(Ny+1)] = U0;                // haut du domaine
+        u[i*(Ny+2)] = u_ex(x[i], y[0]);      // bas
+        u[i*(Ny+2) + (Ny+1)] = u_ex(x[i], y[Ny+1]);
+        //u[i*(Ny+2)] = U0;                       // bas du domaine
+        //u[i*(Ny+2)+(Ny+1)] = U0;                // haut du domaine
     }
 
     for (int j=0; j<Ny+2; j++) {
-        u[(Nx+1)*(Ny+2) + j] = U0;              // droite du domaine
-        u[j] = U0 * (1.0 + alpha*V(y[j], b));   // gauche du domaine
+        u[0*(Ny+2) + j] = u_ex(x[0], y[j]);
+        u[(Nx+1)*(Ny+2) + j] = u_ex(x[Nx+1], y[j]);
+        //u[(Nx+1)*(Ny+2) + j] = U0;              // droite du domaine
+        //u[j] = U0 * (1.0 + alpha*V(y[j], b));   // gauche du domaine
     }
 
     vector<double> uNew = u;
     // Schéma
-    int iteration = 0;              // Nombre d'itérations
-    double laplacien;               // Laplacien approché
+    int iteration = 0;      // Nombre d'itérations
+    double laplacien;   // Laplacien approché
     double maxResidu = tol + 1.0;   // Norme infinie du résidu
-    double residu;                  // Résidu || Ax^l - b
+    double residu;      // Résidu || Ax^l
     while (iteration < Nmax && maxResidu > tol) {
         maxResidu = 0.0;
         for (int i=1; i<Nx+1; i++) {
@@ -95,14 +107,14 @@ int main(int argc, char* argv[])
                 
                 // Calcul de la norme du résidu
                 laplacien = 1/(dx*dx) * (u[(i+1)*(Ny+2) + j] - 2*u[i*(Ny+2) + j] + u[(i-1)*(Ny+2) + j]) + 1/(dy*dy) * (u[(i*(Ny+2) + j+1)] - 2*u[i*(Ny+2) + j] + u[i*(Ny+2) + j-1]);
-                residu = abs( laplacien - f(x[i], y[j]));
+                residu = fabs( -laplacien + f(x[i], y[j]));
                 maxResidu = max(maxResidu, residu);
             }
         }
         u.swap(uNew);
         iteration++;
         // Suivi de la convergence
-        if (iteration == 1 || iteration % 500 == 0 || iteration == Nmax) {
+        if (iteration == 1 || iteration % 10000 == 0 || iteration == Nmax) {
             cout << "Itération " << iteration << ", résidu max: " << maxResidu << endl;
         }
     }
@@ -111,6 +123,19 @@ int main(int argc, char* argv[])
         cout << "Convergence après " << iteration << " itérations." << endl;
         cout << "Résidu max final: " << maxResidu << "." << endl;
     }
+
+
+
+    // Calcul erreur L^inf sur le maillage
+    double err_inf = 0;
+    for (int i=0; i<Nx+2; i++) {
+        for (int j=0; j<Ny+2; j++) {
+            err_inf = max(err_inf, fabs(u[i*(Ny+2) + j] - u_ex(x[i], y[j])));
+        }
+    }
+
+    cout << "h = max(dx, dy) = " << max(dx, dy) << endl;
+    cout << "Erreur L^inf sur le maillage: " << err_inf << endl;
 
 
     // Sauvegarder dans un .txt pour la visualisation
