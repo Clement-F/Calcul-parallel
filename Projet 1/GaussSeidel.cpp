@@ -11,7 +11,7 @@
 #include <cstring>
 #include <vector>
 #include <cstdlib>
-
+#include <algorithm>
 
 // #include <mpi.h>
 
@@ -28,28 +28,24 @@ int nb_savefile =10;
 
 using namespace std;
 
-double f(double x, double y)
-{
-  return 0;
-}
-
-void move(const string source, const string destination)
-{
-  char cmd[100];
-
-  strcpy(cmd,"mv ");
-  strcat(cmd,source.c_str());
-  strcat(cmd," ");
-  strcat(cmd,destination.c_str());
-  std::system(cmd);
-}
-
 // double U0(double x, double y)   // gaussian centrer en a/2, b/2
 // {
 //   double r2 = (x-0.5*a)*(x-0.5*a) + (y-0.5*b)*(y-0.5*b); // carré du rayon au centre du carre
 //   double a =100;    // parametre de centrage de la gaussienne
 //   return exp(-a*r2);
 // }
+double u_ex(double x, double y)
+{
+    return sin(M_PI*x/a)*sin(M_PI*y/b);
+}
+
+
+double f(double x, double y)
+{
+    return -M_PI*M_PI * (1/(a*a) + 1/(b*b)) * u_ex(x, y);
+    // return 0;
+}
+
 
 double V(double y)
 {
@@ -68,7 +64,7 @@ void save_to_file(vector<double> U, string name){
     myfile.close();
 }
 
-int main(int argc, char* argv[]){
+int main(){
 
     // Paramètres du problème
 
@@ -89,7 +85,6 @@ int main(int argc, char* argv[]){
 
     if (a <= 0) {
         cout << "a doit être strictement positif!" << endl;
-        return 1;
     }
     else if (b <= 0) {
         cout << "b doit être strictement positif!" << endl;
@@ -102,28 +97,25 @@ int main(int argc, char* argv[]){
     double x,y;
     for(int i=0; i<Nx+2;i++){
         x = i*dx;
-        U[i*(Ny+2)]= U0;            U_Next[i*(Ny+2)]= U0;               // bas
-        U[i*(Ny+2)+(Ny+1)]= U0;     U_Next[i*(Ny+2)+(Ny+1)]= U0;        // haut
+        U[i*(Ny+2)]=        u_ex(x,0);      U_Next[i*(Ny+2)]=        u_ex(x,0);         // bas
+        U[i*(Ny+2)+(Ny+1)]= u_ex(x,b);      U_Next[i*(Ny+2)+(Ny+1)]= u_ex(x,b);         // haut
+        // cout<<u_ex(x,0)<<u_ex(x,b)<<'\n';
     }
 
     for(int j=0; j<Ny+2;j++){
         y = j*dy;
-        U[j] = U0 *(1+ alpha*V(y)); U_Next[j] = U0 *(1+ alpha*V(y));   // gauche
-        U[(Nx+1)*(Ny+2) +j] = U0;   U_Next[(Nx+1)*(Ny+2) +j] = U0;     // droite
+        U[j] =                u_ex(0,y);    U_Next[j] =                u_ex(0,y);       // gauche
+        U[(Nx+1)*(Ny+2) +j] = u_ex(a,y);    U_Next[(Nx+1)*(Ny+2) +j] = u_ex(a,y);       // droite
+        // cout<<u_ex(0,y)<<u_ex(a,y)<<'\n';
     }
 
     // scheme
     double t=0;
     for(int l=1;l<=Nt;l++)
     {   
-        // cout<< U[(Nx+1)*(Ny+2) +50]<<endl;
-        // cout<< U[50]<<"   "<<U0 *(1+ alpha*V(50*dy))<<endl; 
-        // cout<< U[50*(Ny+2)]<<endl;
-        // cout<< U[50*(Ny+2)+(Ny+1)]<<endl;
-        // cout<<"==============="<<l<<"================="<<endl;
         t=t+dt;
         double progress = round(double(l)/Nt*10000)/100;
-        if(progress == int(progress)) cout<<"progress : "<<progress<<"%  t="<<t<<'\n';
+        if(0.1*progress == int(0.1*progress)) cout<<"progress : "<<progress<<"%  t="<<t<<'\n';
         for(int i=1; i<Nx+1;i++)
         {
             x = i*dx;
@@ -138,12 +130,66 @@ int main(int argc, char* argv[]){
         U.swap(U_Next);
 
     
-        // if(l %nb_savefile==0){string filename ="U_"+to_string(int(l/nb_savefile));  save_to_file(U,filename);}
     }
 
+    
+    vector<double> U_diff((Ny+2)*(Nx+2));
+    for(int i=0;i<Nx+2;i++)
+    {
+        x = i*dx;
+        for(int j=0;j<Ny+2;j++)
+        {
+            y = j*dy;
+            U_diff[i*(Ny+2)+j] = abs( U[i*(Ny+2)+j] - u_ex(x,y));
 
+        }
+    }
+
+    cout<<"norme infini \n";
+    cout<<*max_element(U_diff.begin() , U_diff.end())<<" "<<endl;
     // save to file
-    save_to_file(U,"U_sol");     
+    save_to_file(U,"U_sol");   
 
     return 0;
 }
+
+// int main (int argc, char* argv[])
+// {
+//     Nt =1000; a=1; b=1; Time =1;
+
+//     int k=8;
+//     Nx = pow(2,k);  Ny = Nx;
+//     // dx = 1/(Nx+1);  dy = 1/(Ny+1);  
+//     dt = Time/Nt; 
+
+//     cout<<" parametres du probleme : \n";
+//     cout<<" parametre d'espace : Nx ="<<Nx<<", Ny ="<<Ny<<", a="<<a<<", b="<<b<<'\n';
+//     cout<<" parametre de temps : Nt ="<<Nt<<", Time ="<<Time<<'\n';
+//     cout<<" parametre de bords : U0 ="<<U0<<",  alpha="<<alpha<<'\n';
+
+//     vector<double>  U_sol = GS(Nx,Ny,a,b,Nt);
+
+//     // for(int k=4; k<=10; k++)
+//     // {
+//     //     Nx = pow(2,k);  Ny = Nx;
+//     //     dx = 1/(Nx+1);  dy = 1/(Ny+1);
+//     //     vector<double> U_diff((Ny+2)*(Nx+2));
+
+//     //     cout<<k<<"  "<<Nx<<"\n";
+//     //     vector<double>  U_sol = GS(Nx,Ny,a,b,Nt);
+
+//     //     for(int i=0;i<Nx+2;i++)
+//     //     {
+//     //         x = i*dx;
+//     //         for(int j=0;j<Ny+2;j++)
+//     //         {
+//     //             y = j*dy;
+//     //             U_diff[i*(Ny+2)+j] = abs( U_sol[i*(Ny+2)+j] - u_ex(x,y));
+
+//     //         }
+//     //     }
+//     //     cout<<"norme infini pour l'étape "<<k<<" : \n";
+//     //     cout<<*max_element(U_diff.begin() , U_diff.end())<<" "<<k<<endl;
+
+//     // }
+// }
