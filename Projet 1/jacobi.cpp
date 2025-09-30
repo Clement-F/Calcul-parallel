@@ -79,25 +79,25 @@ int main(int argc, char* argv[])
     // Initilisation
     vector<double> u( (Nx+2)*(Ny+2), U0);
     for (int i=0; i<Nx+2; i++) {
-        u[i*(Ny+2)] = u_ex(x[i], y[0]);      // bas
+        u[i*(Ny+2)] = u_ex(x[i], y[0]);             // bas
         u[i*(Ny+2) + (Ny+1)] = u_ex(x[i], y[Ny+1]);
-        //u[i*(Ny+2)] = U0;                       // bas du domaine
-        //u[i*(Ny+2)+(Ny+1)] = U0;                // haut du domaine
+        //u[i*(Ny+2)] = U0;                         // bas du domaine
+        //u[i*(Ny+2)+(Ny+1)] = U0;                  // haut du domaine
     }
 
     for (int j=0; j<Ny+2; j++) {
-        u[0*(Ny+2) + j] = u_ex(x[0], y[j]);
+        u[0*(Ny+2) + j] = u_ex(x[0], y[j]);         // 0 ???
         u[(Nx+1)*(Ny+2) + j] = u_ex(x[Nx+1], y[j]);
-        //u[(Nx+1)*(Ny+2) + j] = U0;              // droite du domaine
-        //u[j] = U0 * (1.0 + alpha*V(y[j], b));   // gauche du domaine
+        //u[(Nx+1)*(Ny+2) + j] = U0;                // droite du domaine
+        //u[j] = U0 * (1.0 + alpha*V(y[j], b));     // gauche du domaine
     }
 
     vector<double> uNew = u;
     // Schéma
-    int iteration = 0;      // Nombre d'itérations
-    double laplacien;   // Laplacien approché
+    int iteration = 0;              // Nombre d'itérations
+    double laplacien;               // Laplacien approché
     double maxResidu = tol + 1.0;   // Norme infinie du résidu
-    double residu;      // Résidu || Ax^l
+    double residu;                  // Résidu || Ax^l
     while (iteration < Nmax && maxResidu > tol) {
         maxResidu = 0.0;
         for (int i=1; i<Nx+1; i++) {

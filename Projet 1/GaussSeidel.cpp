@@ -95,29 +95,21 @@ int main(int argc, char* argv[]){
         cout << "b doit être strictement positif!" << endl;
     }
 
-    vector<double> U ((Nx+2)*(Ny+2));           // vecteur de la solution au temps t
-    vector<double> U_Next ((Nx+2)*(Ny+2));      // vecteur de la solution au temps t+dt
+    vector<double> U ((Nx+2)*(Ny+2));                   // vecteur de la solution au temps t
+    vector<double> U_Next ((Nx+2)*(Ny+2));              // vecteur de la solution au temps t+dt
     
     // init U
     double x,y;
-    for(int i=1; i<Nx;i++)
+    for(int i=1; i<Nx+2;i++)
     {
         x = i*dx;
-        U[i*Ny]     = U0;
-        U[i*Ny+Ny]  = U0;
-
-        for(int j=1;j<Ny;j++)
-        {
-            y = j*dy;
-            U[i*Ny+j] = U0;
-        } 
+        U[i*(Ny+2)]= U0;    U[i*(Ny+2)+(Ny+1)]= U0;     // bas et haut
     }
 
-    for(int j=0;j<Ny+1;j++)
+    for(int j=0; j<Ny+2;j++)
     {
-        y = j*dy;
-        U[j] = U0 *(1+ alpha*V(y));
-        U[(Nx+1)*(Ny) +j] = U0;
+        y = j*dy; 
+        U[j] = U0 *(1+ alpha*V(y));  U[(Nx+1)*(Ny+2) +j] = U0; // gauche et droite
     }
 
     // scheme
@@ -127,19 +119,20 @@ int main(int argc, char* argv[]){
         t=t+dt;
         double progress = round(double(l)/Nt*10000)/100;
         cout<<"progress : "<<progress<<"%  t="<<t<<'\n';
-        for(int i=1; i<=Nx;i++)
+        for(int i=1; i<=Nx+1;i++)
         {
             x = i*dx;
-            for(int j=1;j<=Ny;j++)
+            for(int j=1;j<=Ny+1;j++)
             {
                 y = j*dy;
-                U_Next[i*Nx+j] = 0.25*(U[(i+1)*Nx+j] + U_Next[(i-1)*Nx+j]+ U[i*Nx+(j+1)]+ U[i*Nx+(j-1)]) - 0.25* dx2 *f(x,y);   
+                U_Next[i*(Ny+2)+j] = 0.25*(U[(i+1)*(Ny+2)+j] + U_Next[(i-1)*(Ny+2)+j]+ U[i*(Ny+2)+(j+1)]+ U[i*(Ny+2)+(j-1)]) - 0.25* dx2 *f(x,y);
+                   
             } 
         }
         U.swap(U_Next);
 
     
-        if(l %nb_savefile==0){string filename ="U_"+to_string(int(l/nb_savefile));  save_to_file(U,filename);}
+        // if(l %nb_savefile==0){string filename ="U_"+to_string(int(l/nb_savefile));  save_to_file(U,filename);}
     }
 
 
