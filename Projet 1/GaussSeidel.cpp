@@ -64,20 +64,15 @@ void save_to_file(vector<double> U, string name){
     myfile.close();
 }
 
-int main(){
+vector<double> GS(){
 
     // Paramètres du problème
 
-    Nx = 100;       Ny = 100;       Nt = 10000;
-    a = 1;          b  = 1;      
     dx = a/(Nx+1);  dy = b/(Ny+1);
-    Time = 1;       dt = Time/Nt; 
-    U0 = 1;         alpha = 0.5;
-
-    double dx2=dx*dx;
+    double dx2= dx*dx;
 
     cout<<" parametres du probleme : \n";
-    cout<<" parametre d'espace : Nx ="<<Nx<<", Ny ="<<Ny<<", a="<<a<<", b="<<b<<'\n';
+    cout<<" parametre d'espace : Nx ="<<Nx<<", Ny ="<<Ny<<", a="<<a<<", b="<<b<<", dx="<<dx<<", dy="<<dy<<'\n';
     cout<<" parametre de temps : Nt ="<<Nt<<", Time ="<<Time<<'\n';
     cout<<" parametre de bords : U0 ="<<U0<<",  alpha="<<alpha<<'\n';
 
@@ -134,62 +129,51 @@ int main(){
 
     
     vector<double> U_diff((Ny+2)*(Nx+2));
+
     for(int i=0;i<Nx+2;i++)
     {
         x = i*dx;
         for(int j=0;j<Ny+2;j++)
         {
             y = j*dy;
+            
             U_diff[i*(Ny+2)+j] = abs( U[i*(Ny+2)+j] - u_ex(x,y));
+            if(U_diff[i*(Ny+2)+j] >0.5)
+            {
+                cout<<"( x:"<<x<<", y:"<<y<<") "<<i<<", "<<j<<"\n";
+                cout<<U_diff[i*(Ny+2)+j]<<'\n'<<U[i*(Ny+2)+j]<<'\n'<<u_ex(x,y)<<'\n';
+            }
 
         }
     }
 
     cout<<"norme infini \n";
     cout<<*max_element(U_diff.begin() , U_diff.end())<<" "<<endl;
-    // save to file
-    save_to_file(U,"U_sol");   
 
-    return 0;
+    // save to file
+    save_to_file(U_diff,"U_sol");   
+
+    return U;
 }
 
-// int main (int argc, char* argv[])
-// {
-//     Nt =1000; a=1; b=1; Time =1;
+int main (int argc, char* argv[])
+{
 
-//     int k=8;
-//     Nx = pow(2,k);  Ny = Nx;
-//     // dx = 1/(Nx+1);  dy = 1/(Ny+1);  
-//     dt = Time/Nt; 
+    a = 1;          b  = 1;      
+    Time = 1;       dt = Time/Nt; 
+    U0 = 1;         alpha = 0.5;
 
-//     cout<<" parametres du probleme : \n";
-//     cout<<" parametre d'espace : Nx ="<<Nx<<", Ny ="<<Ny<<", a="<<a<<", b="<<b<<'\n';
-//     cout<<" parametre de temps : Nt ="<<Nt<<", Time ="<<Time<<'\n';
-//     cout<<" parametre de bords : U0 ="<<U0<<",  alpha="<<alpha<<'\n';
+    cout<<" parametres du probleme : \n";
+    cout<<" parametre d'espace : Nx ="<<Nx<<", Ny ="<<Ny<<", a="<<a<<", b="<<b<<'\n';
+    cout<<" parametre de temps : Nt ="<<Nt<<", Time ="<<Time<<'\n';
+    cout<<" parametre de bords : U0 ="<<U0<<",  alpha="<<alpha<<'\n';
 
-//     vector<double>  U_sol = GS(Nx,Ny,a,b,Nt);
+    for(int k=4;k<10;k++)
+    {
+        Nx = pow(2,k);  Ny = Nx;
+        dx = a/(Nx+1);  dy = b/(Ny+1);
+        Nt = 10000;      dt = Time/Nt; 
+        vector<double>  U_sol = GS();
+    }
 
-//     // for(int k=4; k<=10; k++)
-//     // {
-//     //     Nx = pow(2,k);  Ny = Nx;
-//     //     dx = 1/(Nx+1);  dy = 1/(Ny+1);
-//     //     vector<double> U_diff((Ny+2)*(Nx+2));
-
-//     //     cout<<k<<"  "<<Nx<<"\n";
-//     //     vector<double>  U_sol = GS(Nx,Ny,a,b,Nt);
-
-//     //     for(int i=0;i<Nx+2;i++)
-//     //     {
-//     //         x = i*dx;
-//     //         for(int j=0;j<Ny+2;j++)
-//     //         {
-//     //             y = j*dy;
-//     //             U_diff[i*(Ny+2)+j] = abs( U_sol[i*(Ny+2)+j] - u_ex(x,y));
-
-//     //         }
-//     //     }
-//     //     cout<<"norme infini pour l'étape "<<k<<" : \n";
-//     //     cout<<*max_element(U_diff.begin() , U_diff.end())<<" "<<k<<endl;
-
-//     // }
-// }
+}

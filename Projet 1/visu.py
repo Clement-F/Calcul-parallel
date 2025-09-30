@@ -4,15 +4,17 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib import cm
 
-Nx, Ny = 100, 100
 a, b = 1, 1
+
+f = open("U_sol.txt", "r")
+lines = f.readlines()
+
+Nx = int(np.sqrt(len(lines)) -2)
+Ny = Nx
 
 x = np.linspace(0, a, Nx+2)
 y = np.linspace(0, b, Ny+2)
 X, Y = np.meshgrid(x, y)
-
-f = open("U_sol.txt", "r")
-lines = f.readlines()
 
 U=np.zeros((Nx+2,Ny+2))
 
@@ -28,6 +30,13 @@ ax.set_xlabel("x")
 ax.set_ylabel("y")
 ax.set_zlabel("u(x,y)")
 
+
+xlim = (0,1)
+ylim = (0,1)
+zlim = (0,1)
+ax.set_xlim(xlim)
+ax.set_ylim(ylim)
+ax.set_zlim(zlim)
 ax.set(xticklabels=[],
        yticklabels=[],
        zticklabels=[])
