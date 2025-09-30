@@ -72,18 +72,18 @@ int main(int argc, char* argv[]){
 
     // Paramètres du problème
 
-    Nx = 100;   Ny = 100;   Nt = 1000;
-    a = 1;      b = 1;      
-    dx = a/Nx;  dy= b/Ny;
-    Time = 1;   dt =Time/Nt; 
-    U0 = 1; alpha =0.5;
+    Nx = 100;       Ny = 100;       Nt = 10000;
+    a = 1;          b  = 1;      
+    dx = a/(Nx+1);  dy = b/(Ny+1);
+    Time = 1;       dt = Time/Nt; 
+    U0 = 1;         alpha = 0.5;
 
     double dx2=dx*dx;
 
     cout<<" parametres du probleme : \n";
     cout<<" parametre d'espace : Nx ="<<Nx<<", Ny ="<<Ny<<", a="<<a<<", b="<<b<<'\n';
     cout<<" parametre de temps : Nt ="<<Nt<<", Time ="<<Time<<'\n';
-    cout<<" parametre de bords : U0 ="<<U0<<", alpha="<<alpha<<'\n';
+    cout<<" parametre de bords : U0 ="<<U0<<",  alpha="<<alpha<<'\n';
 
 
 
@@ -100,32 +100,38 @@ int main(int argc, char* argv[]){
     
     // init U
     double x,y;
-    for(int i=1; i<Nx+2;i++)
-    {
+    for(int i=0; i<Nx+2;i++){
         x = i*dx;
-        U[i*(Ny+2)]= U0;    U[i*(Ny+2)+(Ny+1)]= U0;     // bas et haut
+        U[i*(Ny+2)]= U0;            U_Next[i*(Ny+2)]= U0;               // bas
+        U[i*(Ny+2)+(Ny+1)]= U0;     U_Next[i*(Ny+2)+(Ny+1)]= U0;        // haut
     }
 
-    for(int j=0; j<Ny+2;j++)
-    {
-        y = j*dy; 
-        U[j] = U0 *(1+ alpha*V(y));  U[(Nx+1)*(Ny+2) +j] = U0; // gauche et droite
+    for(int j=0; j<Ny+2;j++){
+        y = j*dy;
+        U[j] = U0 *(1+ alpha*V(y)); U_Next[j] = U0 *(1+ alpha*V(y));   // gauche
+        U[(Nx+1)*(Ny+2) +j] = U0;   U_Next[(Nx+1)*(Ny+2) +j] = U0;     // droite
     }
 
     // scheme
     double t=0;
     for(int l=1;l<=Nt;l++)
-    {
+    {   
+        // cout<< U[(Nx+1)*(Ny+2) +50]<<endl;
+        // cout<< U[50]<<"   "<<U0 *(1+ alpha*V(50*dy))<<endl; 
+        // cout<< U[50*(Ny+2)]<<endl;
+        // cout<< U[50*(Ny+2)+(Ny+1)]<<endl;
+        // cout<<"==============="<<l<<"================="<<endl;
         t=t+dt;
         double progress = round(double(l)/Nt*10000)/100;
-        cout<<"progress : "<<progress<<"%  t="<<t<<'\n';
-        for(int i=1; i<=Nx+1;i++)
+        if(progress == int(progress)) cout<<"progress : "<<progress<<"%  t="<<t<<'\n';
+        for(int i=1; i<Nx+1;i++)
         {
             x = i*dx;
-            for(int j=1;j<=Ny+1;j++)
+            for(int j=1;j<Ny+1;j++)
             {
                 y = j*dy;
-                U_Next[i*(Ny+2)+j] = 0.25*(U[(i+1)*(Ny+2)+j] + U_Next[(i-1)*(Ny+2)+j]+ U[i*(Ny+2)+(j+1)]+ U[i*(Ny+2)+(j-1)]) - 0.25* dx2 *f(x,y);
+                // cout<<"( x:"<<x<<", y:"<<y<<") "<<i<<", "<<j<<"\n";
+                U_Next[i*(Ny+2)+j] = 0.25*(U[(i+1)*(Ny+2)+j] + U_Next[(i-1)*(Ny+2)+j]+ U[i*(Ny+2)+(j+1)]+ U_Next[i*(Ny+2)+(j-1)]) - 0.25* dx2 *f(x,y);
                    
             } 
         }
