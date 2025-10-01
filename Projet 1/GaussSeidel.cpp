@@ -53,7 +53,7 @@ double V(double y)
 }
 
 
-void save_to_file(vector<double> U, string name){
+void sol_to_file(vector<double> U, string name){
     std::ofstream myfile;
     myfile.open(name+".txt");
     for (int i=0; i<Nx+2; i++) {
@@ -64,7 +64,18 @@ void save_to_file(vector<double> U, string name){
     myfile.close();
 }
 
-vector<double> GS(){
+
+
+void save_to_file(vector<double> U, string name){
+    std::ofstream myfile;
+    myfile.open(name+".txt");
+    for (int j=0; j<U.size(); j++) {
+        myfile << U[j] << "\n";
+    }
+    myfile.close();
+}
+
+double GS(){
 
     // Paramètres du problème
 
@@ -104,13 +115,17 @@ vector<double> GS(){
         // cout<<u_ex(0,y)<<u_ex(a,y)<<'\n';
     }
 
+    for(int i=1;i<Nx+1;i++){ for(int j=1;j<Ny+1;j++){
+        U[i*(Ny+2)+j] = 0;
+    }}
+
     // scheme
     double t=0;
     for(int l=1;l<=Nt;l++)
     {   
         t=t+dt;
-        double progress = round(double(l)/Nt*10000)/100;
-        if(0.1*progress == int(0.1*progress)) cout<<"progress : "<<progress<<"%  t="<<t<<'\n';
+        // double progress = round(double(l)/Nt*10000)/100;
+        // if(progress - int(progress)<10e-7) cout<<"progress : "<<progress<<"%  t="<<t<<'\n';
         for(int i=1; i<Nx+1;i++)
         {
             x = i*dx;
@@ -140,8 +155,8 @@ vector<double> GS(){
             U_diff[i*(Ny+2)+j] = abs( U[i*(Ny+2)+j] - u_ex(x,y));
             if(U_diff[i*(Ny+2)+j] >0.5)
             {
-                cout<<"( x:"<<x<<", y:"<<y<<") "<<i<<", "<<j<<"\n";
-                cout<<U_diff[i*(Ny+2)+j]<<'\n'<<U[i*(Ny+2)+j]<<'\n'<<u_ex(x,y)<<'\n';
+                // cout<<"( x:"<<x<<", y:"<<y<<") "<<i<<", "<<j<<"\n";
+                // cout<<U_diff[i*(Ny+2)+j]<<'\n'<<U[i*(Ny+2)+j]<<'\n'<<u_ex(x,y)<<'\n';
             }
 
         }
@@ -151,29 +166,36 @@ vector<double> GS(){
     cout<<*max_element(U_diff.begin() , U_diff.end())<<" "<<endl;
 
     // save to file
-    save_to_file(U_diff,"U_sol");   
+    // sol_to_file(U_diff,"U_sol");   
 
-    return U;
+    return (*max_element(U_diff.begin() , U_diff.end()));
 }
 
 int main (int argc, char* argv[])
 {
-
+    Nt =100;
     a = 1;          b  = 1;      
     Time = 1;       dt = Time/Nt; 
     U0 = 1;         alpha = 0.5;
 
-    cout<<" parametres du probleme : \n";
-    cout<<" parametre d'espace : Nx ="<<Nx<<", Ny ="<<Ny<<", a="<<a<<", b="<<b<<'\n';
-    cout<<" parametre de temps : Nt ="<<Nt<<", Time ="<<Time<<'\n';
-    cout<<" parametre de bords : U0 ="<<U0<<",  alpha="<<alpha<<'\n';
+    // cout<<" parametres du probleme : \n";
+    // cout<<" parametre d'espace : Nx ="<<Nx<<", Ny ="<<Ny<<", a="<<a<<", b="<<b<<'\n';
+    // cout<<" parametre de temps : Nt ="<<Nt<<", Time ="<<Time<<'\n';
+    // cout<<" parametre de bords : U0 ="<<U0<<",  alpha="<<alpha<<'\n';
 
-    for(int k=4;k<10;k++)
+    vector<double> norme_inf(10);
+
+    for(int k=0;k<=6;k++)
     {
+        cout<<"============= "<<k<<" ===================== \n";
         Nx = pow(2,k);  Ny = Nx;
         dx = a/(Nx+1);  dy = b/(Ny+1);
-        Nt = 10000;      dt = Time/Nt; 
-        vector<double>  U_sol = GS();
+        Nt = 20000;      dt = Time/Nt; 
+        norme_inf[k] = GS();
+
     }
+
+    save_to_file(norme_inf,"norme_inf");   
+
 
 }

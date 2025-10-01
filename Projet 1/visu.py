@@ -6,45 +6,58 @@ from matplotlib import cm
 
 a, b = 1, 1
 
-f = open("U_sol.txt", "r")
+# f = open("U_sol.txt", "r")
+# lines = f.readlines()
+
+# Nx = int(np.sqrt(len(lines)) -2)    #on travail sur un carre
+# Ny = Nx
+
+# x = np.linspace(0, a, Nx+2)
+# y = np.linspace(0, b, Ny+2)
+# X, Y = np.meshgrid(x, y)
+
+# U=np.zeros((Nx+2,Ny+2))
+
+# for i in range(Nx+2):
+#     for j in range(Ny+2):
+#         U[i,j] = (float(lines[i*(Ny+2)+j]))
+
+
+# fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+# ax.plot_surface(X, Y, U.T, cmap=cm.viridis)
+
+# ax.set_xlabel("x")
+# ax.set_ylabel("y")
+# ax.set_zlabel("u(x,y)")
+
+
+# xlim = (0,1)
+# ylim = (0,1)
+# zlim = (0,1)
+# ax.set_xlim(xlim)
+# ax.set_ylim(ylim)
+# ax.set_zlim(zlim)
+# ax.set(xticklabels=[],
+#        yticklabels=[],
+#        zticklabels=[])
+
+# plt.show()
+
+
+f = open("norme_inf.txt", "r")
 lines = f.readlines()
 
-Nx = int(np.sqrt(len(lines)) -2)
-Ny = Nx
+U=[]
 
-x = np.linspace(0, a, Nx+2)
-y = np.linspace(0, b, Ny+2)
-X, Y = np.meshgrid(x, y)
+for line in lines: 
+    U.append(float(line))
 
-U=np.zeros((Nx+2,Ny+2))
+K = np.arange(len(lines))
+I = 2**K
 
-for i in range(Nx+2):
-    for j in range(Ny+2):
-        U[i,j] = (float(lines[i*(Ny+2)+j]))
-
-
-fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-ax.plot_surface(X, Y, U.T, cmap=cm.viridis)
-
-ax.set_xlabel("x")
-ax.set_ylabel("y")
-ax.set_zlabel("u(x,y)")
-
-
-xlim = (0,1)
-ylim = (0,1)
-zlim = (0,1)
-ax.set_xlim(xlim)
-ax.set_ylim(ylim)
-ax.set_zlim(zlim)
-ax.set(xticklabels=[],
-       yticklabels=[],
-       zticklabels=[])
-
+plt.plot(np.log(I),np.log(U))
 plt.show()
 
-
-k=0
 
 # def plot_film(psi, duration=10, frames_per_second=30, a=1,b=1):
     
