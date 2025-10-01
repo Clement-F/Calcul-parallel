@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib import cm
 
-a, b = 1, 1
+# a, b = 1, 1
 
 # f = open("U_sol.txt", "r")
 # lines = f.readlines()
@@ -43,6 +43,7 @@ a, b = 1, 1
 
 # plt.show()
 
+# #%%
 
 f = open("norme_inf.txt", "r")
 lines = f.readlines()
@@ -53,10 +54,15 @@ for line in lines:
     U.append(float(line))
 
 K = np.arange(len(lines))
-I = 2**K
+I = 1.5**K
 
-plt.plot(np.log(I),np.log(U))
+plt.loglog(I,U)
+plt.grid()
+plt.xlabel("pas d espace dx")
+plt.ylabel("norme inf")
 plt.show()
+
+#%%
 
 
 # def plot_film(psi, duration=10, frames_per_second=30, a=1,b=1):
