@@ -23,7 +23,7 @@ double dx;            // Pas d'espace horizontal
 double dy;            // Pas d'espace vertical
 int Nmax = 10000;     // Nombre d'itérations max de l'algorithme
 double tol = 1e-6;    // Tolérance de l'algorithme (critère d'arrêt)
-bool EtudeErr = true; // Résolution du problème original (false) OU Etude de l'erreur sur solution particulière (true)
+bool EtudeErr = false; // Résolution du problème original (false) OU Etude de l'erreur sur solution particulière (true)
 
 // Solution particulière régulière (pour la validation du code)
 double u_ex(double x, double y)
@@ -35,8 +35,11 @@ double u_ex(double x, double y)
 // Second membre de l'équation de Poisson
 double f(double x, double y)
 {
-    return -M_PI*M_PI * (1/(a*a) + 1/(b*b)) * u_ex(x, y);
-    //return 0;
+    if (EtudeErr) {
+        return -M_PI*M_PI * (1/(a*a) + 1/(b*b)) * u_ex(x, y);
+    } else {
+        return 0;
+    }
 }
 
 // Conditions aux limites
@@ -88,7 +91,7 @@ int main(int argc, char* argv[])
     for (int j=0; j<Ny+2; j++) {y[j] = j*dy;}
 
     // Initilisation
-    vector<double> u( (Nx+2)*(Ny+2), U0);
+    vector<double> u( (Nx+2)*(Ny+2), 0.0);
     for (int i=0; i<Nx+2; i++) {
         if (EtudeErr) {
             u[i*(Ny+2)] = u_ex(x[i], y[0]);             // bas du domaine
@@ -108,7 +111,8 @@ int main(int argc, char* argv[])
             u[j] = U0 * (1.0 + alpha*V(y[j], b));       // gauche du domaine
         }
     }
-    vector<double> uNew = u;
+    vector<double> uNew = u;    // Pour itérer
+    vector<double> u0 = u;      // Pour écrire dans le .txt, ne pas modifier
 
 
     // Schéma
@@ -153,14 +157,17 @@ int main(int argc, char* argv[])
 
         iteration++;
         // Suivi de la convergence
-        if (iteration == 1 || iteration % 10000 == 0 || iteration == Nmax) {
-            cout << "Itération " << iteration << ", résidu max: " << maxResidu << endl;
+        if (myRank == 0) {
+            if (iteration == 1 || iteration % 10000 == 0 || iteration == Nmax) {
+                cout << "Itération " << iteration << ", résidu max: " << maxResidu << endl;
+            }
         }
     }
-
-    if (maxResidu <= tol) {
-        cout << "Convergence après " << iteration << " itérations." << endl;
-        cout << "Résidu max final: " << maxResidu << "." << endl;
+    if (myRank == 0) {
+        if (maxResidu <= tol) {
+            cout << "Convergence après " << iteration << " itérations." << endl;
+            cout << "Résidu max final: " << maxResidu << "." << endl;
+        }
     }
 
     // Calcul erreur L^inf sur le maillage (si EtudeErr = true)
@@ -171,17 +178,18 @@ int main(int argc, char* argv[])
                 err_inf = max(err_inf, fabs(u[i*(Ny+2) + j] - u_ex(x[i], y[j])));
             }
         }
-        cout << "h = max(dx, dy) = " << max(dx, dy) << endl;
-        cout << "Erreur L^inf sur le maillage: " << err_inf << endl;
+        if (myRank == 0) {
+            cout << "h = max(dx, dy) = " << max(dx, dy) << endl;
+            cout << "Erreur L^inf sur le maillage: " << err_inf << endl;
+        }
     }
 
     // Sauvegarder dans un .txt pour visualiser
     if (myRank == 0) {
-        vector<double> u_global((Nx+2)*(Ny+2), 0.0);
         // Copie de la partie locale à myRank=0
         for (int i=i_start; i<=i_end; i++) {
             for (int j=0; j<Ny+2; j++) {
-                u_global[i*(Ny+2)+j] = u[i*(Ny+2)+j]; 
+                u0[i*(Ny+2)+j] = u[i*(Ny+2)+j]; 
             }
         }
 
@@ -198,7 +206,7 @@ int main(int argc, char* argv[])
             MPI_Recv(temp.data(), Nx_p*(Ny+2), MPI_DOUBLE, p, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             for (int i=0; i<Nx_p; i++) {
                 for (int j=0; j<Ny+2; j++) {
-                    u_global[(i_start_p+i)*(Ny+2) + j] = temp[i*(Ny+2) + j];
+                    u0[(i_start_p+i)*(Ny+2) + j] = temp[i*(Ny+2) + j];
                 }
             }
         }
@@ -209,7 +217,7 @@ int main(int argc, char* argv[])
         myfile.open("u_sol.txt");
         for (int i=0; i<Nx+2; i++) {
             for (int j=0; j<Ny+2; j++) {
-                myfile << u_global[i*(Ny+2) + j] << "\n";
+                myfile << u0[i*(Ny+2) + j] << "\n";
             }
         }
         myfile.close();
