@@ -22,7 +22,7 @@ double dx;           // Pas d'espace horizontal
 double dy;           // Pas d'espace vertical
 int Nmax = 10000;   // Nombre d'itérations max de l'algorithme
 double tol = 1e-6;   // Tolérance de l'algorithme (critère d'arrêt)
-bool EtudeErr = true; // Résolution du problème original (false) OU Etude de l'erreur sur solution particulère (true)
+bool EtudeErr = false; // Résolution du problème original (false) OU Etude de l'erreur sur solution particulère (true)
 
 
 // Solution particulière régulière (pour la validation du code)
@@ -35,8 +35,11 @@ double u_ex(double x, double y)
 // Second membre de l'équation de Poisson
 double f(double x, double y)
 {
-    return -M_PI*M_PI * (1/(a*a) + 1/(b*b)) * u_ex(x, y);
-    //return 0;
+    if (EtudeErr) {
+        return -M_PI*M_PI * (1/(a*a) + 1/(b*b)) * u_ex(x, y);
+    } else {
+        return 0;
+    }
 }
 
 // Conditions aux limites
@@ -173,8 +176,8 @@ int main(int argc, char* argv[])
             }
         }
     }
-    if (maxResidu <= tol) {
-        if (myRank == 0) {
+    if (myRank == 0) {
+        if (maxResidu <= tol) {
             cout << "Convergence après " << iteration << " itérations." << endl;
             cout << "Résidu max final: " << maxResidu << "." << endl;
         }
@@ -212,6 +215,10 @@ int main(int argc, char* argv[])
             }
         }
 
+        for (int j=0; j<Ny+2; j++) {
+            u_global[0*(Ny+2) + j] = u[0*(Ny+2) + j];
+        }
+
         // Réception des autres process (myRank != 0)
         for (int p=1; p<nbTask; p++) {
             int taille_bloc = Nx / nbTask;
@@ -228,6 +235,17 @@ int main(int argc, char* argv[])
                 for (int j=0; j<Ny+2; j++) {
                     u_global[(i_global)*(Ny+2) + j] = temp[i_local*(Ny+2) + j];
                 }
+            }
+            // Prendre en compte la cellule Nx_p pour p = nbTask-1 pour avoir les conditions de bord droit du domaine
+            if (p == nbTask - 1) {
+                for (int j=0; j<Ny+2; j++) {
+                    u_global[(Nx+1)*(Ny+2) + j] = temp[(Nx_p+1)*(Ny+2) + j];
+                }
+            }
+        }
+        if (nbTask == 1) {
+            for (int j=0; j<Ny+2; j++) {
+                u_global[(Nx+1)*(Ny+2) + j] = u[(Nx_local+1)*(Ny+2)+j];
             }
         }
 
