@@ -19,7 +19,6 @@
 
 int n;                      // taille matrices
 int Nt,Nx,Ny;               // nb time step,  nb space step
-int Nx_n, start, end, diff;
 double a,b;                 // dimension carre
 double Time;                // Temps d arret
 double dx,dy;               // space step
@@ -35,6 +34,7 @@ using namespace std;
 //   double a =100;    // parametre de centrage de la gaussienne
 //   return exp(-a*r2);
 // }
+
 double u_ex(double x, double y)
 {
     return sin(M_PI*x/a)*sin(M_PI*y/b);
@@ -99,11 +99,6 @@ int main (int argc, char* argv[]){
     dx = a/(Nx+1);  dy = b/(Ny+1);
     Nt = 2*Ny*Nx +100;      dt = Time/Nt; 
 
-    Nx_n = floor(double(Nx)/nbTask);
-    start = myRank*(Nx_n+1); end = min((Nx_n+1)*(myRank+1)-1, N-1);
-    diff = end-start +3;
-
-
     dx = a/(Nx+1);  dy = b/(Ny+1);
     double dx2= dx*dx;
 
@@ -121,46 +116,61 @@ int main (int argc, char* argv[]){
         cout << "b doit être strictement positif!" << endl;
     }
 
-    vector<double> U ((Nx+2)*(Ny+2));                   // vecteur de la solution au temps t
-    vector<double> U_Next ((Nx+2)*(Ny+2));              // vecteur de la solution au temps t+dt
+    // Subdivision pour le calcul parallèle
+    int taille_bloc = Nx / nbTask;  // Nx points pour nbTask process
+    int reste = Nx % nbTask;        // Reste des points (si Nx non divisible par nbTask)
 
-    // solution du process
-    vector<double> U_loc  ((Nx_n+2)*(Ny+2));            // vecteur de la solution sur le process au temps t
-    vector<double> U_loc_Next  ((Nx_n+2)*(Ny+2));       // vecteur de la solution sur le process aut temps t+dt
+    int Nx_local = taille_bloc + (myRank < reste ? 1 : 0);          // Tous les process ont taille_bloc points et les premiers (myRank < reste) récupèrent tous un point
+    int decalage = myRank * taille_bloc + min(myRank, reste);       // Nombre de points déjà attribués avant ce process
     
+    int i_start = 1 + decalage;
+    int i_end = i_start + Nx_local - 1;
     
 
+    // solution du probleme
+    vector<double> U_loc  ((Nx_local+2)*(Ny+2));            // vecteur de la solution du probleme au temps t
+    
     // init U
     double x,y;
-    for(int i=0; i<Nx_n+2;i++){
-        x = (i+myRank*Nx_n)*dx;
-        U_loc[i*(Ny+2)]=        u_ex(x,0);      U_loc_Next[i*(Ny+2)]=        u_ex(x,0);         // bas
-        U_loc[i*(Ny+2)+(Ny+1)]= u_ex(x,b);      U_loc_Next[i*(Ny+2)+(Ny+1)]= u_ex(x,b);         // haut
+    for(int i=0; i<Nx_local+2;i++){
+        int i_global = decalage + i;
+        x = (i_global)*dx;
+        U_loc[i*(Ny+2)]=        u_ex(x,0);         // bas
+        U_loc[i*(Ny+2)+(Ny+1)]= u_ex(x,b);         // haut
         // cout<<u_ex(x,0)<<u_ex(x,b)<<'\n';
     }
 
-    for(int j=0; j<Ny+2;j++){
-        y = j*dy;
-        if(myRank==1)       {U[j] =                u_ex(0,y);    U_Next[j] =                u_ex(0,y);}       // gauche
-        if(myRank==nbTask-1){U[(Nx+1)*(Ny+2) +j] = u_ex(a,y);    U_Next[(Nx+1)*(Ny+2) +j] = u_ex(a,y);}       // droite
-        // cout<<u_ex(0,y)<<u_ex(a,y)<<'\n';
-    }
+    if(myRank==0){          for(int j=0; j<Ny+2;j++){y = j*dy;  U_loc[j] = u_ex(0,y);}}                     // gauche 
+    if(myRank==nbTask-1){   for(int j=0; j<Ny+2;j++){y = j*dy;  U_loc[(Nx_local+1)*(Ny+2) +j] = u_ex(a,y);}}  // droite
+    
 
-    for(int i=start;i<end;i++){ for(int j=1;j<Ny+1;j++){
-        U[i*(Ny+2)+j] = 0;
-    }}
-
-
-
-
-
+    
+    vector<double> U_loc_Next =U_loc;       // vecteur de la solution du probleme au temps t+dt
+    vector<double> U_send_left(Ny+2);
+    vector<double> U_send_right(Ny+2);
     // scheme
     double t=0;
     for(int l=1;l<=Nt;l++)
     {   
         t=t+dt;
 
-        for(int i=1; i<Nx_n+1;i++)
+        // update de rouge
+        // phase de com 
+        // envoie de données superflue
+        if(myRank!=nbTask-1){
+            for(int j=0; j<Ny+1; j++){ U_send_left[j] = U_loc[Nx_local*(Ny+2)+j];}
+            MPI_Isend (U_send_left,Ny+2,MPI_DOUBLE,myRank+1,0,MPI_COMM_WORLD,&reqSendLeft);
+            MPI_Irecv(&U_loc[Ny+2],Ny+2,MPI_DOUBLE,myRank-1,0,MPI_COMM_WORLD,&reqRecvLeft);
+        } 
+
+        if(myRank!=0){
+            for(int j=0; j<Ny+1; j++){ U_send_right[j] = U_loc[j];}
+            MPI_Isend (U_send_right,Ny+2,MPI_DOUBLE,myRank+1,0,MPI_COMM_WORLD,&reqSendLeft);
+            MPI_Irecv (&U_loc[Nx_local*(Ny+2)],Ny+2,MPI_DOUBLE,myRank-1,0,MPI_COMM_WORLD,&reqRecvLeft);
+        } 
+
+
+        for(int i=1; i<Nx_local+1;i++)
         {
             x = i*dx;
             for(int j=1;j<Ny+1;j++)
@@ -169,30 +179,109 @@ int main (int argc, char* argv[]){
                 if(is_red(i,j))
                 { 
                 // cout<<"( x:"<<x<<", y:"<<y<<") "<<i<<", "<<j<<"\n";
-                U_loc_Next[i*(Ny+2)+j] = 0.25*(U_loc[(i+1)*(Ny+2)+j] + U_loc[(i-1)*(Ny+2)+j]+ U_loc[i*(Ny+2)+(j+1)]+ U_loc[i*(Ny+2)+(j-1)]) - 0.25* dx2 *f(x,y);
+                U_loc_Next[i*(Ny+2)+j] = 0.25*(U_loc[(i+1)*(Ny+2)+j] + U_loc[i*(Ny+2)+(j+1)]);      
+                U_loc_Next[i*(Ny+2)+j] += 0.25*(U_loc[(i-1)*(Ny+2)+j]+ U_loc[i*(Ny+2)+(j-1)]);      
+                U_loc_Next[i*(Ny+2)+j] += -0.25*dx2 *f(x,y);                                       
                 }
             } 
         }
+
+        // update de noir
+        // phase de com noir
+        // envoie de données superflue        
+
+        if(myRank!=nbTask-1){
+            for(int j=0; j<Ny+1; j++){ U_send_left[j] = U_loc[Nx_local*(Ny+2)+j];}
+            MPI_Isend (U_send_left,Ny+2,MPI_DOUBLE,myRank+1,0,MPI_COMM_WORLD,&reqSendLeft);
+            MPI_Irecv(&U_loc[Ny+2],Ny+2,MPI_DOUBLE,myRank-1,0,MPI_COMM_WORLD,&reqRecvLeft);
+        } 
         
-        for(int i=1; i<Nx_n+1;i++)
+        if(myRank!=0){
+            for(int j=0; j<Ny+1; j++){ U_send_right[j] = U_loc[j];}
+            MPI_Isend (U_send_right,Ny+2,MPI_DOUBLE,myRank+1,0,MPI_COMM_WORLD,&reqSendRight);
+            MPI_Irecv (&U_loc[Nx_local*(Ny+2)],Ny+2,MPI_DOUBLE,myRank-1,0,MPI_COMM_WORLD,&reqRecvRight);
+        } 
+
+        for(int i=1; i<Nx_local+1;i++)
         {
             x = i*dx;
             for(int j=1;j<Ny+1;j++)
             {
                 y = j*dy;
-                if(is_red(i,j))
+                if(not is_red(i,j))
                 { 
-                // cout<<"( x:"<<x<<", y:"<<y<<") "<<i<<", "<<j<<"\n";
-                U_loc_Next[i*(Ny+2)+j] = 0.25*(U_loc[(i+1)*(Ny+2)+j] + U_loc[(i-1)*(Ny+2)+j]+ U_loc[i*(Ny+2)+(j+1)]+ U_loc[i*(Ny+2)+(j-1)]) - 0.25* dx2 *f(x,y);
+                U_loc_Next[i*(Ny+2)+j] = 0.25*(U_loc_Next[(i+1)*(Ny+2)+j] + U_loc_Next[i*(Ny+2)+(j+1)]);    
+                U_loc_Next[i*(Ny+2)+j] += 0.25*(U_loc_Next[(i-1)*(Ny+2)+j]+ U_loc_Next[i*(Ny+2)+(j-1)]);    
+                U_loc_Next[i*(Ny+2)+j] += -0.25* dx2 *f(x,y);                                               
                 }
             } 
         }
-        U.swap(U_Next);
+        U_loc.swap(U_loc_Next);
 
     
     }
 
-    
+    // Sauvegarder dans un .txt pour visualiser
+    if (myRank == 0) {
+        vector<double> U_global((Nx+2)*(Ny+2), 0.0);
+
+        // Copie de la partie locale à myRank=0
+        for (int i_local=1; i_local<=Nx_local; i_local++) {
+            int i_global = decalage + i_local;
+            for (int j=0; j<Ny+2; j++) {
+                U_global[i_global*(Ny+2)+j] = U_loc[i_local*(Ny+2)+j]; 
+            }
+        }
+
+        for (int j=0; j<Ny+2; j++) {
+            U_global[0*(Ny+2) + j] = U_loc[0*(Ny+2) + j];
+        }
+
+        // Réception des autres process (myRank != 0)
+        for (int p=1; p<nbTask; p++) {
+            int taille_bloc = Nx / nbTask;
+            int reste = Nx % nbTask;
+            int Nx_p = taille_bloc + (p < reste ? 1 : 0);
+            int decalage_p = p * taille_bloc + min(p, reste);
+
+            vector<double> temp((Nx_p+2)*(Ny+2)); // Vecteur temporaire pour recevoir
+            MPI_Recv(temp.data(), (Nx_p+2)*(Ny+2), MPI_DOUBLE, p, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+            // Ne prendre que les cellules intérieurs (éviter les cellules temporaires [0, Nx_p+1] et garder uniquement [1, Nx_p])
+            for (int i_local=1; i_local<=Nx_p; i_local++) {
+                int i_global = decalage_p + i_local;
+                for (int j=0; j<Ny+2; j++) {
+                    U_global[(i_global)*(Ny+2) + j] = temp[i_local*(Ny+2) + j];
+                }
+            }
+            // Prendre en compte la cellule Nx_p pour p = nbTask-1 pour avoir les conditions de bord droit du domaine
+            if (p == nbTask - 1) {
+                for (int j=0; j<Ny+2; j++) {
+                    U_global[(Nx+1)*(Ny+2) + j] = temp[(Nx_p+1)*(Ny+2) + j];
+                }
+            }
+        }
+        if (nbTask == 1) {
+            for (int j=0; j<Ny+2; j++) {
+                U_global[(Nx+1)*(Ny+2) + j] = U_loc[(Nx_local+1)*(Ny+2)+j];
+            }
+        }
+
+        // Écriture du fichier
+        std::ofstream myfile;
+        myfile.open("u_sol.txt");
+        for (int i=0; i<Nx+2; i++) {
+            for (int j=0; j<Ny+2; j++) {
+                myfile << U_global[i*(Ny+2) + j] << "\n";
+            }
+        }
+        myfile.close();
+        cout << "Sauvegarde dans u_sol.txt effectuée." << endl;
+    } else {
+        MPI_Send(U_loc.data(), (Nx_local+2)*(Ny+2), MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+    }
+
+
     vector<double> U_diff((Ny+2)*(Nx+2));
 
     for(int i=0;i<Nx+2;i++)
@@ -217,6 +306,7 @@ int main (int argc, char* argv[]){
 
     // save to file
     // sol_to_file(U_diff,"U_sol");   
+    MPI_Finalize();
 
-    return (*max_element(U_diff.begin() , U_diff.end()));
+    return 0;
 }
