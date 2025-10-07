@@ -152,7 +152,7 @@ double GS(){
 
     
     }
-    cout<<"le process a fini en "<<l<<" étapes \n";
+    cout<<"le process a fini en "<<l<<" etapes \n";
     
     vector<double> U_diff((Ny+2)*(Nx+2)); // U_diff = U_GS - U_ex
 
@@ -183,7 +183,9 @@ double GS(){
     // save to file
     // sol_to_file(U_diff,"U_sol");   
 
-    return (*max_element(U_diff.begin() , U_diff.end()));
+    // return (*max_element(U_diff.begin() , U_diff.end()));
+
+    return l;
 }
 
 int main (int argc, char* argv[])
@@ -195,24 +197,26 @@ int main (int argc, char* argv[])
     Time = 1;       dt = Time/Nt; 
     U0 = 1;         alpha = 0.5;
 
-    vector<double> norme_inf;
+    // vector<double> norme_inf;
+    vector<double> iter_conv;
 
     Nx = 50;  Ny = Nx;
     dx = a/(Nx+1);  dy = b/(Ny+1);
     Nt = 10000;      dt = Time/Nt; 
-    GS();
+    // GS();
 
-    // for(int k=2;k<=6;k++)
-    // {
-    //     cout<<"============= "<<k<<" ===================== \n";
-    //     Nx = int(pow(2,k));  Ny = Nx;
-    //     dx = a/(Nx+1);  dy = b/(Ny+1);
-    //     Nt = 2*Ny*Nx +100;      dt = Time/Nt; 
-    //     norme_inf.push_back( GS());
+    for(int k=4;k<=7;k++)
+    {
+        cout<<"============= "<<k<<" ===================== \n";
+        Nx = int(pow(2,k));  Ny = Nx;
+        dx = a/(Nx+1);  dy = b/(Ny+1);
+        dt = Time/Nt; 
+        // norme_inf.push_back( GS());
+        iter_conv.push_back(GS());
 
-    // }
-
-    save_to_file(norme_inf,"norme_inf");   
+    }
+    save_to_file(iter_conv,"iter_conv");
+    // save_to_file(norme_inf,"norme_inf");   
 
 
 }
