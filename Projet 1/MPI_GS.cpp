@@ -5,7 +5,6 @@
 
 #include <iostream>
 #include <fstream>
-#include <filesystem>
 #include <cmath>
 #include <math.h>
 #include <cstring>
@@ -13,7 +12,7 @@
 #include <cstdlib>
 #include <algorithm>
 
-// #include <mpi.h>
+#include <mpi.h>
 
 //  var global
 
@@ -27,13 +26,6 @@ double U0, alpha;
 int nb_savefile =10;
 
 using namespace std;
-
-// double U0(double x, double y)   // gaussian centrer en a/2, b/2
-// {
-//   double r2 = (x-0.5*a)*(x-0.5*a) + (y-0.5*b)*(y-0.5*b); // carré du rayon au centre du carre
-//   double a =100;    // parametre de centrage de la gaussienne
-//   return exp(-a*r2);
-// }
 
 double u_ex(double x, double y)
 {
@@ -49,7 +41,8 @@ double f(double x, double y)
 
 bool is_red(int i,int j)
 {
-    if(i+j %2 ==0) return true;
+    if((i+j)%2 ==0){return true;}
+    else{ return false;}
 }
 
 
@@ -81,10 +74,11 @@ void save_to_file(vector<double> U, string name){
     myfile.close();
 }
 
-int main (int argc, char* argv[]){
+
+int main(int argc, char* argv[])
+{
 
     MPI_Init(&argc, &argv);
-
     int nbTask;
     int myRank;
     MPI_Comm_size(MPI_COMM_WORLD, &nbTask);
@@ -95,18 +89,21 @@ int main (int argc, char* argv[]){
     a = 1;          b  = 1;      
     Time = 1;       dt = Time/Nt; 
     U0 = 1;         alpha = 0.5;
-    Nx = 100;       Ny = Nx;
+    Nx = 30;        Ny = Nx;
     dx = a/(Nx+1);  dy = b/(Ny+1);
-    Nt = 2*Ny*Nx +100;      dt = Time/Nt; 
+    Nt = 2000;      dt = Time/Nt; 
 
     dx = a/(Nx+1);  dy = b/(Ny+1);
     double dx2= dx*dx;
 
-    cout<<" parametres du probleme : \n";
-    cout<<" parametre d'espace : Nx ="<<Nx<<", Ny ="<<Ny<<", a="<<a<<", b="<<b<<", dx="<<dx<<", dy="<<dy<<'\n';
-    cout<<" parametre de temps : Nt ="<<Nt<<", Time ="<<Time<<'\n';
-    cout<<" parametre de bords : U0 ="<<U0<<",  alpha="<<alpha<<'\n';
-
+    cout<<"des "<<nbTask<<" je suis le process "<<myRank<<'\n';
+    if(myRank ==0)
+    {
+    cout<<"parametres du probleme : \n";
+    cout<<"parametre d'espace : Nx ="<<Nx<<", Ny ="<<Ny<<", a="<<a<<", b="<<b<<", dx="<<dx<<", dy="<<dy<<'\n';
+    cout<<"parametre de temps : Nt ="<<Nt<<", Time ="<<Time<<'\n';
+    cout<<"parametre de bords : U0 ="<<U0<<",  alpha="<<alpha<<'\n';
+    }
 
 
     if (a <= 0) {
@@ -125,7 +122,10 @@ int main (int argc, char* argv[]){
     
     int i_start = 1 + decalage;
     int i_end = i_start + Nx_local - 1;
+    cout<<"process "<<myRank<<" operates between "<<i_start<<" and "<<i_end<<'\n';
     
+    bool isLeft_red =(i_start %2==0);
+    bool isRight_red= (i_end  %2==0);
 
     // solution du probleme
     vector<double> U_loc  ((Nx_local+2)*(Ny+2));            // vecteur de la solution du probleme au temps t
@@ -140,35 +140,58 @@ int main (int argc, char* argv[]){
         // cout<<u_ex(x,0)<<u_ex(x,b)<<'\n';
     }
 
-    if(myRank==0){          for(int j=0; j<Ny+2;j++){y = j*dy;  U_loc[j] = u_ex(0,y);}}                     // gauche 
-    if(myRank==nbTask-1){   for(int j=0; j<Ny+2;j++){y = j*dy;  U_loc[(Nx_local+1)*(Ny+2) +j] = u_ex(a,y);}}  // droite
-    
 
+    if(myRank==0){          for(int j=0; j<Ny+2;j++){y = j*dy;  U_loc[j] = u_ex(0,y);}}                     // gauche 
+    if(myRank==(nbTask-1)){ for(int j=0; j<Ny+2;j++){y = j*dy;  U_loc[(Nx_local+1)*(Ny+2) +j] = u_ex(a,y);}}  // droite
+    
+    cout<<"valeurs de u init attribuee pour "<<myRank<<'\n';
     
     vector<double> U_loc_Next =U_loc;       // vecteur de la solution du probleme au temps t+dt
-    vector<double> U_send_left(Ny+2);
-    vector<double> U_send_right(Ny+2);
+    vector<double> U_left (Ny+2), U_right(Ny+2); 
     // scheme
     double t=0;
     for(int l=1;l<=Nt;l++)
     {   
         t=t+dt;
+        if(myRank ==0){
+        double progress = round(double(l)/Nt*10000)/100;
+        if(progress - int(progress)<10e-7) cout<<"progress : "<<progress<<"%  t="<<t<<'\n';}
 
         // update de rouge
         // phase de com 
         // envoie de données superflue
-        if(myRank!=nbTask-1){
-            for(int j=0; j<Ny+1; j++){ U_send_left[j] = U_loc[Nx_local*(Ny+2)+j];}
-            MPI_Isend (U_send_left,Ny+2,MPI_DOUBLE,myRank+1,0,MPI_COMM_WORLD,&reqSendLeft);
-            MPI_Irecv(&U_loc[Ny+2],Ny+2,MPI_DOUBLE,myRank-1,0,MPI_COMM_WORLD,&reqRecvLeft);
+
+
+        MPI_Request reqSendLeft, reqRecvLeft;
+        MPI_Request reqSendRight, reqRecvRight;
+        if(myRank>0){
+            for(int j=1;j<Ny+1; j++){U_left[j]=U_loc[j+Ny+2];}
+            MPI_Isend(&U_left[0], Ny+2,MPI_DOUBLE,myRank-1,0,MPI_COMM_WORLD,&reqSendLeft);
+            MPI_Irecv(&U_left[0],    Ny+2,MPI_DOUBLE,myRank-1,1,MPI_COMM_WORLD,&reqRecvLeft);
+            for(int j=1;j<Ny+1; j++){U_loc[j]=U_left[j];}
         } 
 
-        if(myRank!=0){
-            for(int j=0; j<Ny+1; j++){ U_send_right[j] = U_loc[j];}
-            MPI_Isend (U_send_right,Ny+2,MPI_DOUBLE,myRank+1,0,MPI_COMM_WORLD,&reqSendLeft);
-            MPI_Irecv (&U_loc[Nx_local*(Ny+2)],Ny+2,MPI_DOUBLE,myRank-1,0,MPI_COMM_WORLD,&reqRecvLeft);
+        if(myRank<nbTask-1){
+            for(int j=1;j<Ny+1; j++){U_right[j]=U_loc[(Nx_local)*(Ny+2)+j];}
+            MPI_Isend (&U_right[0], Ny+2,MPI_DOUBLE,myRank+1,1,MPI_COMM_WORLD,&reqSendRight);
+            MPI_Irecv (&U_right[0],    Ny+2,MPI_DOUBLE,myRank+1,0,MPI_COMM_WORLD,&reqRecvRight);
+            for(int j=1;j<Ny+1; j++){U_loc[(Nx_local+1)*(Ny+2)+j]=U_right[j];}
         } 
 
+
+
+
+        // MPI Exchanges (check everything is send/recv)
+        if(myRank > 0){
+        MPI_Wait(&reqSendLeft, MPI_STATUS_IGNORE);
+        MPI_Wait(&reqRecvLeft, MPI_STATUS_IGNORE);
+        }
+        if(myRank < nbTask-1){
+        MPI_Wait(&reqSendRight, MPI_STATUS_IGNORE);
+        MPI_Wait(&reqRecvRight, MPI_STATUS_IGNORE);
+        }
+
+        // cout<<myRank<<" a envoyé et reçu ses données \n";
 
         for(int i=1; i<Nx_local+1;i++)
         {
@@ -176,31 +199,47 @@ int main (int argc, char* argv[]){
             for(int j=1;j<Ny+1;j++)
             {
                 y = j*dy;
-                if(is_red(i,j))
-                { 
-                // cout<<"( x:"<<x<<", y:"<<y<<") "<<i<<", "<<j<<"\n";
+                if(is_red(i,j)){ 
+                // cout<<"Red ,"<<myRank<<" ,"<<is_red(i,j)<<"  ( x:"<<x<<", y:"<<y<<") "<<i<<", "<<j<<"\n";
                 U_loc_Next[i*(Ny+2)+j] = 0.25*(U_loc[(i+1)*(Ny+2)+j] + U_loc[i*(Ny+2)+(j+1)]);      
                 U_loc_Next[i*(Ny+2)+j] += 0.25*(U_loc[(i-1)*(Ny+2)+j]+ U_loc[i*(Ny+2)+(j-1)]);      
                 U_loc_Next[i*(Ny+2)+j] += -0.25*dx2 *f(x,y);                                       
                 }
             } 
         }
+        
+        // cout<<myRank<<" a calculé pour les noeuds rouges \n";
 
         // update de noir
         // phase de com noir
         // envoie de données superflue        
 
-        if(myRank!=nbTask-1){
-            for(int j=0; j<Ny+1; j++){ U_send_left[j] = U_loc[Nx_local*(Ny+2)+j];}
-            MPI_Isend (U_send_left,Ny+2,MPI_DOUBLE,myRank+1,0,MPI_COMM_WORLD,&reqSendLeft);
-            MPI_Irecv(&U_loc[Ny+2],Ny+2,MPI_DOUBLE,myRank-1,0,MPI_COMM_WORLD,&reqRecvLeft);
+        if(myRank>0){
+            for(int j=1;j<Ny+1; j++){U_left[j]=U_loc[j+Ny+2];}
+            MPI_Isend(&U_left[0], Ny+2,MPI_DOUBLE,myRank-1,0,MPI_COMM_WORLD,&reqSendLeft);
+            MPI_Irecv(&U_left[0],    Ny+2,MPI_DOUBLE,myRank-1,1,MPI_COMM_WORLD,&reqRecvLeft);
+            for(int j=1;j<Ny+1; j++){U_loc[j]=U_left[j];}
         } 
-        
-        if(myRank!=0){
-            for(int j=0; j<Ny+1; j++){ U_send_right[j] = U_loc[j];}
-            MPI_Isend (U_send_right,Ny+2,MPI_DOUBLE,myRank+1,0,MPI_COMM_WORLD,&reqSendRight);
-            MPI_Irecv (&U_loc[Nx_local*(Ny+2)],Ny+2,MPI_DOUBLE,myRank-1,0,MPI_COMM_WORLD,&reqRecvRight);
+
+        if(myRank<nbTask-1){
+            for(int j=1;j<Ny+1; j++){U_right[j]=U_loc[(Nx_local)*(Ny+2)+j];}
+            MPI_Isend (&U_right[0], Ny+2,MPI_DOUBLE,myRank+1,1,MPI_COMM_WORLD,&reqSendRight);
+            MPI_Irecv (&U_right[0],    Ny+2,MPI_DOUBLE,myRank+1,0,MPI_COMM_WORLD,&reqRecvRight);
+            for(int j=1;j<Ny+1; j++){U_loc[(Nx_local+1)*(Ny+2)+j]=U_right[j];}
         } 
+
+
+        // MPI Exchanges (check everything is send/recv)
+        if(myRank > 0){
+        MPI_Wait(&reqSendLeft, MPI_STATUS_IGNORE);
+        MPI_Wait(&reqRecvLeft, MPI_STATUS_IGNORE);
+        }
+        if(myRank < nbTask-1){
+        MPI_Wait(&reqSendRight, MPI_STATUS_IGNORE);
+        MPI_Wait(&reqRecvRight, MPI_STATUS_IGNORE);
+        }
+    
+        // cout<<myRank<<" a envoyé et reçu ses données updates \n";
 
         for(int i=1; i<Nx_local+1;i++)
         {
@@ -208,8 +247,8 @@ int main (int argc, char* argv[]){
             for(int j=1;j<Ny+1;j++)
             {
                 y = j*dy;
-                if(not is_red(i,j))
-                { 
+                if(not is_red(i,j)){ 
+                // cout<<"Black ,"<<myRank<<" ,"<<is_red(i,j)<<"  ( x:"<<x<<", y:"<<y<<") "<<i<<", "<<j<<"\n";
                 U_loc_Next[i*(Ny+2)+j] = 0.25*(U_loc_Next[(i+1)*(Ny+2)+j] + U_loc_Next[i*(Ny+2)+(j+1)]);    
                 U_loc_Next[i*(Ny+2)+j] += 0.25*(U_loc_Next[(i-1)*(Ny+2)+j]+ U_loc_Next[i*(Ny+2)+(j-1)]);    
                 U_loc_Next[i*(Ny+2)+j] += -0.25* dx2 *f(x,y);                                               
@@ -217,9 +256,12 @@ int main (int argc, char* argv[]){
             } 
         }
         U_loc.swap(U_loc_Next);
-
-    
+        
+        // cout<<myRank<<" a calculé pour les noeuds noires  \n";
     }
+
+// ===========================================================================================
+// ===========================================================================================
 
     // Sauvegarder dans un .txt pour visualiser
     if (myRank == 0) {
@@ -238,7 +280,8 @@ int main (int argc, char* argv[]){
         }
 
         // Réception des autres process (myRank != 0)
-        for (int p=1; p<nbTask; p++) {
+        for (int p=1; p<nbTask; p++)
+        {
             int taille_bloc = Nx / nbTask;
             int reste = Nx % nbTask;
             int Nx_p = taille_bloc + (p < reste ? 1 : 0);
@@ -254,6 +297,7 @@ int main (int argc, char* argv[]){
                     U_global[(i_global)*(Ny+2) + j] = temp[i_local*(Ny+2) + j];
                 }
             }
+
             // Prendre en compte la cellule Nx_p pour p = nbTask-1 pour avoir les conditions de bord droit du domaine
             if (p == nbTask - 1) {
                 for (int j=0; j<Ny+2; j++) {
@@ -261,6 +305,7 @@ int main (int argc, char* argv[]){
                 }
             }
         }
+
         if (nbTask == 1) {
             for (int j=0; j<Ny+2; j++) {
                 U_global[(Nx+1)*(Ny+2) + j] = U_loc[(Nx_local+1)*(Ny+2)+j];
@@ -269,19 +314,15 @@ int main (int argc, char* argv[]){
 
         // Écriture du fichier
         std::ofstream myfile;
-        myfile.open("u_sol.txt");
+        myfile.open("U_sol.txt");
         for (int i=0; i<Nx+2; i++) {
             for (int j=0; j<Ny+2; j++) {
                 myfile << U_global[i*(Ny+2) + j] << "\n";
             }
         }
         myfile.close();
-        cout << "Sauvegarde dans u_sol.txt effectuée." << endl;
-    } else {
-        MPI_Send(U_loc.data(), (Nx_local+2)*(Ny+2), MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
-    }
-
-
+        cout << "Sauvegarde dans U_sol.txt effectuée." << endl;
+    
     vector<double> U_diff((Ny+2)*(Nx+2));
 
     for(int i=0;i<Nx+2;i++)
@@ -291,7 +332,7 @@ int main (int argc, char* argv[]){
         {
             y = j*dy;
             
-            U_diff[i*(Ny+2)+j] = abs( U[i*(Ny+2)+j] - u_ex(x,y));
+            U_diff[i*(Ny+2)+j] = abs( U_global[i*(Ny+2)+j] - u_ex(x,y));
             if(U_diff[i*(Ny+2)+j] >0.5)
             {
                 // cout<<"( x:"<<x<<", y:"<<y<<") "<<i<<", "<<j<<"\n";
@@ -306,6 +347,9 @@ int main (int argc, char* argv[]){
 
     // save to file
     // sol_to_file(U_diff,"U_sol");   
+    } else {
+        MPI_Send(U_loc.data(), (Nx_local+2)*(Ny+2), MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+    }
     MPI_Finalize();
 
     return 0;

@@ -21,10 +21,10 @@ int n;                      // taille matrices
 int Nt,Nx,Ny;               // nb time step,  nb space step
 double a,b;                 // dimension carre
 double Time;                // Temps d arret
-double dx,dy;               // space step
+double dx,dy,h;             // space step
 double dt;                  // time step
 double U0, alpha;
-int nb_savefile =10;
+double tol = 1e-6;   // Tolérance de l'algorithme (critère d'arrêt)
 
 using namespace std;
 
@@ -76,8 +76,8 @@ double GS(){
 
     // Paramètres du problème
 
-    dx = a/(Nx+1);  dy = b/(Ny+1);
-    double dx2= dx*dx;
+    dx = a/(Nx+1);  dy = b/(Ny+1); h = max(dx,dy);
+    double dh2= h*h;
 
     // donne les parametre qui lui ont ete donne
     cout<<" parametres du probleme : \n";
@@ -119,11 +119,15 @@ double GS(){
 
     // scheme
     double t=0;
-    for(int l=1;l<=Nt;l++)
+    int    l = 0;                   // Nombre d'itérations
+    double laplacien;               // Laplacien approché
+    double maxResidu = tol + 1.0;   // Norme infinie du résidu
+    double residu;                  // Résidu || Ax^l
+    while ((l<Nt && maxResidu > tol))
     {   
-        t=t+dt;
-        double progress = round(double(l)/Nt*10000)/100;
-        if(progress - int(progress)<10e-7) cout<<"progress : "<<progress<<"%  t="<<t<<'\n';
+        maxResidu = 0.0;
+        // cout<<l<<" t"<<'\n';
+        t=t+dt;l++;
         for(int i=1; i<Nx+1;i++)
         {
             x = i*dx;
@@ -131,15 +135,24 @@ double GS(){
             {
                 y = j*dy;
                 U_Next[i*(Ny+2)+j] = 0.25*(U[(i+1)*(Ny+2)+j] + U[i*(Ny+2)+(j+1)]);              // termes non update de GS
-                U_Next[i*(Ny+2)+j] += 0.25*( U_Next[(i-1)*(Ny+2)+j]+ U_Next[i*(Ny+2)+(j-1)]);   // termes update de GS
-                U_Next[i*(Ny+2)+j] += -0.25* dx2 *f(x,y);                                       // terme de bord
+                U_Next[i*(Ny+2)+j] += 0.25*(U_Next[(i-1)*(Ny+2)+j]+ U_Next[i*(Ny+2)+(j-1)]);    // termes update de GS
+                U_Next[i*(Ny+2)+j] += -0.25* dh2 *f(x,y);                                       // terme de bord
+                
+                // Calcul de la norme du résidu
+                laplacien = 1/(dx*dx) * (U[(i+1)*(Ny+2) + j] - 2*U[i*(Ny+2) + j] + U[(i-1)*(Ny+2) + j]);
+                laplacien+= 1/(dy*dy) * (U[(i*(Ny+2) + j+1)] - 2*U[i*(Ny+2) + j] + U[i*(Ny+2) + j-1])  ;
+                residu    = abs(-laplacien + f(x,y));
+                maxResidu = max( maxResidu, residu);
+                // if(residu >= tol) cout<<"( x:"<<x<<", y:"<<y<<") "<<i<<", "<<j<<"\n";
             } 
         }
         U.swap(U_Next);
+        double progress = round(double(l)/Nt*10000)/100;
+        if(int(double(l)/Nt*100000)%1000==0) cout<<"progress : "<<progress<<"%  erreur :"<<maxResidu<<'\n';
 
     
     }
-
+    cout<<"le process a fini en "<<l<<" étapes \n";
     
     vector<double> U_diff((Ny+2)*(Nx+2)); // U_diff = U_GS - U_ex
 
@@ -156,8 +169,8 @@ double GS(){
 
             if(U_diff[i*(Ny+2)+j] >0.5)
             {
-                cout<<"( x:"<<x<<", y:"<<y<<") "<<i<<", "<<j<<"\n";
-                cout<<U_diff[i*(Ny+2)+j]<<'\n'<<U[i*(Ny+2)+j]<<'\n'<<u_ex(x,y)<<'\n';
+                // cout<<"( x:"<<x<<", y:"<<y<<") "<<i<<", "<<j<<"\n";
+                // cout<<U_diff[i*(Ny+2)+j]<<'\n'<<U[i*(Ny+2)+j]<<'\n'<<u_ex(x,y)<<'\n';
             }
 
         }
@@ -184,15 +197,20 @@ int main (int argc, char* argv[])
 
     vector<double> norme_inf;
 
-    for(int k=2;k<=6;k++)
-    {
-        cout<<"============= "<<k<<" ===================== \n";
-        Nx = int(pow(2,k));  Ny = Nx;
-        dx = a/(Nx+1);  dy = b/(Ny+1);
-        Nt = 2*Ny*Nx +100;      dt = Time/Nt; 
-        norme_inf.push_back( GS());
+    Nx = 50;  Ny = Nx;
+    dx = a/(Nx+1);  dy = b/(Ny+1);
+    Nt = 10000;      dt = Time/Nt; 
+    GS();
 
-    }
+    // for(int k=2;k<=6;k++)
+    // {
+    //     cout<<"============= "<<k<<" ===================== \n";
+    //     Nx = int(pow(2,k));  Ny = Nx;
+    //     dx = a/(Nx+1);  dy = b/(Ny+1);
+    //     Nt = 2*Ny*Nx +100;      dt = Time/Nt; 
+    //     norme_inf.push_back( GS());
+
+    // }
 
     save_to_file(norme_inf,"norme_inf");   
 
