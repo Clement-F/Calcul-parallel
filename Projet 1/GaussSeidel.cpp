@@ -77,6 +77,7 @@ double GS(){
     // Paramètres du problème
 
     dx = a/(Nx+1);  dy = b/(Ny+1); h = max(dx,dy);
+    double dx_2 = 1/(dx*dx); double dy_2 = 1/(dy*dy);
     double dh2= h*h;
 
     // donne les parametre qui lui ont ete donne
@@ -123,20 +124,22 @@ double GS(){
     double laplacien;               // Laplacien approché
     double maxResidu = tol + 1.0;   // Norme infinie du résidu
     double residu;                  // Résidu || Ax^l
+    double cste = 1./(2*dx_2 + 2*dy_2);
+
     while ((l<Nt && maxResidu > tol))
     {   
         maxResidu = 0.0;
-        // cout<<l<<" t"<<'\n';
         t=t+dt;l++;
+        // cout<<l;
         for(int i=1; i<Nx+1;i++)
         {
             x = i*dx;
             for(int j=1;j<Ny+1;j++)
             {
                 y = j*dy;
-                U_Next[i*(Ny+2)+j] = 0.25*(U[(i+1)*(Ny+2)+j] + U[i*(Ny+2)+(j+1)]);              // termes non update de GS
-                U_Next[i*(Ny+2)+j] += 0.25*(U_Next[(i-1)*(Ny+2)+j]+ U_Next[i*(Ny+2)+(j-1)]);    // termes update de GS
-                U_Next[i*(Ny+2)+j] += -0.25* dh2 *f(x,y);                                       // terme de bord
+                U_Next[i*(Ny+2)+j] = cste*(U[(i+1)*(Ny+2)+j]*dx_2 + U[i*(Ny+2)+(j+1)]*dy_2);      // termes non update de GS
+                U_Next[i*(Ny+2)+j] += cste*(U_Next[(i-1)*(Ny+2)+j]*dx_2+ U_Next[i*(Ny+2)+(j-1)]*dy_2);  // termes update de GS
+                U_Next[i*(Ny+2)+j] += -cste* f(x,y);                                                    // terme de bord
                 
                 // Calcul de la norme du résidu
                 laplacien = 1/(dx*dx) * (U[(i+1)*(Ny+2) + j] - 2*U[i*(Ny+2) + j] + U[(i-1)*(Ny+2) + j]);
@@ -184,8 +187,8 @@ double GS(){
     // sol_to_file(U_diff,"U_sol");   
 
     // return (*max_element(U_diff.begin() , U_diff.end()));
-
     return l;
+    // return 0;
 }
 
 int main (int argc, char* argv[])
@@ -193,7 +196,7 @@ int main (int argc, char* argv[])
 
     // on assigne les variables globales
     Nt =10000;
-    a = 1;          b  = 1;      
+    a = 1;          b  = 1.5;      
     Time = 1;       dt = Time/Nt; 
     U0 = 1;         alpha = 0.5;
 

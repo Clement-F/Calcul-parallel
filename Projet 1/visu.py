@@ -87,20 +87,24 @@ U=[]
 for line in lines: 
     U.append(float(line))
 
-K = np.linspace(4,4-1+len(lines),len(lines))
+K = np.linspace(4,7,4)
+K = np.concatenate((K,K))
 I = 2**K; I=1/I
+
+print(K)
 X2 = I**2
 X1 = I
 X1 = 1/I; X2 = 1/X2
 
 print(U,I)
 plt.grid()
-plt.loglog(I,U,'-o' ,label='iterations')
-plt.loglog(I,X1,'--',label='h^-1')
-plt.loglog(I,X2,'--',label='h^-2')
+plt.loglog(I[:4],U[:4],'-o' ,label='Gauss-Seidel')
+plt.loglog(I[4:],U[4:],'-o' ,label='Jacobi')
+plt.loglog(I[:4],X1[:4],'--',label='h^-1')
+plt.loglog(I[:4],X2[:4],'--',label='h^-2')
 plt.legend()
 plt.xlabel("dx")
-plt.ylabel("norme inf")
+plt.ylabel("nb d'iteration")
 
 plt.xlim(I[0]*1.1,I[-1]/1.1)
 plt.show()
