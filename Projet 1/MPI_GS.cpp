@@ -25,6 +25,8 @@ double dt;                  // time step
 double U0, alpha;
 int nb_savefile =10;
 
+int size_left_r,size_left_n,size_right_r,size_right_n;
+
 using namespace std;
 
 double u_ex(double x, double y)
@@ -89,9 +91,9 @@ int main(int argc, char* argv[])
     a = 1;          b  = 1;      
     Time = 1;       dt = Time/Nt; 
     U0 = 1;         alpha = 0.5;
-    Nx = 30;        Ny = Nx;
+    Nx = 40;        Ny = Nx;
     dx = a/(Nx+1);  dy = b/(Ny+1);
-    Nt = 2000;      dt = Time/Nt; 
+    Nt = 2*Nx*Ny+100;      dt = Time/Nt; 
 
     dx = a/(Nx+1);  dy = b/(Ny+1);
     double dx2= dx*dx;
@@ -99,10 +101,12 @@ int main(int argc, char* argv[])
     cout<<"des "<<nbTask<<" je suis le process "<<myRank<<'\n';
     if(myRank ==0)
     {
+    cout<<"================================================== \n";
     cout<<"parametres du probleme : \n";
     cout<<"parametre d'espace : Nx ="<<Nx<<", Ny ="<<Ny<<", a="<<a<<", b="<<b<<", dx="<<dx<<", dy="<<dy<<'\n';
     cout<<"parametre de temps : Nt ="<<Nt<<", Time ="<<Time<<'\n';
     cout<<"parametre de bords : U0 ="<<U0<<",  alpha="<<alpha<<'\n';
+    cout<<"================================================== \n";
     }
 
 
@@ -122,10 +126,11 @@ int main(int argc, char* argv[])
     
     int i_start = 1 + decalage;
     int i_end = i_start + Nx_local - 1;
+    
     cout<<"process "<<myRank<<" operates between "<<i_start<<" and "<<i_end<<'\n';
     
     bool isLeft_red =(i_start %2==0);
-    bool isRight_red= (i_end  %2==0);
+    bool isRight_red=(i_end  %2==0);
 
     // solution du probleme
     vector<double> U_loc  ((Nx_local+2)*(Ny+2));            // vecteur de la solution du probleme au temps t
@@ -144,10 +149,13 @@ int main(int argc, char* argv[])
     if(myRank==0){          for(int j=0; j<Ny+2;j++){y = j*dy;  U_loc[j] = u_ex(0,y);}}                     // gauche 
     if(myRank==(nbTask-1)){ for(int j=0; j<Ny+2;j++){y = j*dy;  U_loc[(Nx_local+1)*(Ny+2) +j] = u_ex(a,y);}}  // droite
     
-    cout<<"valeurs de u init attribuee pour "<<myRank<<'\n';
+    cout<<"valeurs de U_loc init attribuee pour "<<myRank<<'\n';
     
-    vector<double> U_loc_Next =U_loc;       // vecteur de la solution du probleme au temps t+dt
-    vector<double> U_left (Ny+2), U_right(Ny+2); 
+    vector<double> U_loc_Next =U_loc;       // vecteur de la solution du probleme au temps t+
+    if(isLeft_red){  size_left_r = ceil(Ny/2);  size_left_n = floor(Ny/2);} else {size_left_r = floor(Ny/2);  size_left_n = ceil(Ny/2);}
+    if(isRight_red){ size_right_r = ceil(Ny/2); size_right_n = floor(Ny/2);}else {size_right_r = floor(Ny/2); size_right_n = ceil(Ny/2);}
+
+    vector<double> U_left_R(size_left_r), U_right_R(size_right_r), U_left_N(size_left_n), U_right_N(size_right_n); 
     // scheme
     double t=0;
     for(int l=1;l<=Nt;l++)
@@ -165,42 +173,43 @@ int main(int argc, char* argv[])
         MPI_Request reqSendLeft, reqRecvLeft;
         MPI_Request reqSendRight, reqRecvRight;
         if(myRank>0){
-            for(int j=1;j<Ny+1; j++){U_left[j]=U_loc[j+Ny+2];}
-            MPI_Isend(&U_left[0], Ny+2,MPI_DOUBLE,myRank-1,0,MPI_COMM_WORLD,&reqSendLeft);
-            MPI_Irecv(&U_left[0],    Ny+2,MPI_DOUBLE,myRank-1,1,MPI_COMM_WORLD,&reqRecvLeft);
-            for(int j=1;j<Ny+1; j++){U_loc[j]=U_left[j];}
+            for(int i=0, j=int(not isLeft_red);     i<=size_left_r, j<Ny+2;     i++, j+=2){
+                U_left_R[i]=U_loc[Ny+2+j]; 
+                // cout<<"R "<<i<<" "<<Ny+2+j<<'\n';
+            }
+
+            // if(l==1) cout<<"left "<<myRank<<" to "<<myRank-1<<'\n';
+            MPI_Isend(&U_left_R[0], Ny+2,MPI_DOUBLE,myRank-1,0,MPI_COMM_WORLD,&reqSendLeft);
+            MPI_Irecv(&U_left_R[0], Ny+2,MPI_DOUBLE,myRank-1,1,MPI_COMM_WORLD,&reqRecvLeft);
+            MPI_Wait(&reqSendLeft, MPI_STATUS_IGNORE);
+            MPI_Wait(&reqRecvLeft, MPI_STATUS_IGNORE);
+
+            for(int i=0, j=int(isLeft_red);         i<=size_left_r, j<Ny+2;     i++, j+=2){
+                U_loc[i]=U_left_R[j];}
         } 
 
         if(myRank<nbTask-1){
-            for(int j=1;j<Ny+1; j++){U_right[j]=U_loc[(Nx_local)*(Ny+2)+j];}
-            MPI_Isend (&U_right[0], Ny+2,MPI_DOUBLE,myRank+1,1,MPI_COMM_WORLD,&reqSendRight);
-            MPI_Irecv (&U_right[0],    Ny+2,MPI_DOUBLE,myRank+1,0,MPI_COMM_WORLD,&reqRecvRight);
-            for(int j=1;j<Ny+1; j++){U_loc[(Nx_local+1)*(Ny+2)+j]=U_right[j];}
-        } 
-
-
-
-
-        // MPI Exchanges (check everything is send/recv)
-        if(myRank > 0){
-        MPI_Wait(&reqSendLeft, MPI_STATUS_IGNORE);
-        MPI_Wait(&reqRecvLeft, MPI_STATUS_IGNORE);
+            for(int i=0, j=int(not isRight_red);    i<=size_right_r, j<Ny+2;    i++, j+=2){
+                U_right_R[i]=U_loc[(Nx_local)*(Ny+2)+j];}
+            // if(l==1) cout<<"right "<<myRank<<" to "<<myRank+1<<'\n';
+            MPI_Isend (&U_right_R[0], Ny+2,MPI_DOUBLE,myRank+1,1,MPI_COMM_WORLD,&reqSendRight);
+            MPI_Irecv (&U_right_R[0], Ny+2,MPI_DOUBLE,myRank+1,0,MPI_COMM_WORLD,&reqRecvRight);
+            MPI_Wait(&reqSendRight, MPI_STATUS_IGNORE);
+            MPI_Wait(&reqRecvRight, MPI_STATUS_IGNORE);
+            for(int i=0, j=int(isRight_red);        i<=size_right_r, j<Ny+2;    i++, j+=2){
+                U_loc[(Nx_local+1)*(Ny+2)+j]=U_right_R[i];}
         }
-        if(myRank < nbTask-1){
-        MPI_Wait(&reqSendRight, MPI_STATUS_IGNORE);
-        MPI_Wait(&reqRecvRight, MPI_STATUS_IGNORE);
-        }
-
+        
         // cout<<myRank<<" a envoyé et reçu ses données \n";
 
         for(int i=1; i<Nx_local+1;i++)
         {
-            x = i*dx;
+            x = (i+decalage)*dx;
             for(int j=1;j<Ny+1;j++)
             {
                 y = j*dy;
+                // if(l==1)cout<<"Red ,"<<myRank<<" ,"<<is_red(i,j)<<"  ( x:"<<x<<", y:"<<y<<") "<<i+decalage<<", "<<j<<"\n";
                 if(is_red(i,j)){ 
-                // cout<<"Red ,"<<myRank<<" ,"<<is_red(i,j)<<"  ( x:"<<x<<", y:"<<y<<") "<<i<<", "<<j<<"\n";
                 U_loc_Next[i*(Ny+2)+j] = 0.25*(U_loc[(i+1)*(Ny+2)+j] + U_loc[i*(Ny+2)+(j+1)]);      
                 U_loc_Next[i*(Ny+2)+j] += 0.25*(U_loc[(i-1)*(Ny+2)+j]+ U_loc[i*(Ny+2)+(j-1)]);      
                 U_loc_Next[i*(Ny+2)+j] += -0.25*dx2 *f(x,y);                                       
@@ -215,35 +224,39 @@ int main(int argc, char* argv[])
         // envoie de données superflue        
 
         if(myRank>0){
-            for(int j=1;j<Ny+1; j++){U_left[j]=U_loc[j+Ny+2];}
-            MPI_Isend(&U_left[0], Ny+2,MPI_DOUBLE,myRank-1,0,MPI_COMM_WORLD,&reqSendLeft);
-            MPI_Irecv(&U_left[0],    Ny+2,MPI_DOUBLE,myRank-1,1,MPI_COMM_WORLD,&reqRecvLeft);
-            for(int j=1;j<Ny+1; j++){U_loc[j]=U_left[j];}
+            for(int i=0, j=int(isLeft_red);     i<=size_left_n, j<Ny+2;     i++, j+=2){
+                U_left_N[i]=U_loc[Ny+2+j]; 
+                // cout<<"N "<<i<<" "<<Ny+2+j<<'\n';
+            }
+
+            // if(l==1) cout<<"left "<<myRank<<" to "<<myRank-1<<'\n';
+            MPI_Isend(&U_left_N[0], Ny+2,MPI_DOUBLE,myRank-1,0,MPI_COMM_WORLD,&reqSendLeft);
+            MPI_Irecv(&U_left_N[0], Ny+2,MPI_DOUBLE,myRank-1,1,MPI_COMM_WORLD,&reqRecvLeft);
+            MPI_Wait(&reqSendLeft, MPI_STATUS_IGNORE);
+            MPI_Wait(&reqRecvLeft, MPI_STATUS_IGNORE);
+
+            for(int i=0, j=int(not isLeft_red); i<=size_left_n, j<Ny+2;     i++, j+=2){
+                U_loc[j]=U_left_N[i];}
         } 
 
         if(myRank<nbTask-1){
-            for(int j=1;j<Ny+1; j++){U_right[j]=U_loc[(Nx_local)*(Ny+2)+j];}
-            MPI_Isend (&U_right[0], Ny+2,MPI_DOUBLE,myRank+1,1,MPI_COMM_WORLD,&reqSendRight);
-            MPI_Irecv (&U_right[0],    Ny+2,MPI_DOUBLE,myRank+1,0,MPI_COMM_WORLD,&reqRecvRight);
-            for(int j=1;j<Ny+1; j++){U_loc[(Nx_local+1)*(Ny+2)+j]=U_right[j];}
-        } 
-
-
-        // MPI Exchanges (check everything is send/recv)
-        if(myRank > 0){
-        MPI_Wait(&reqSendLeft, MPI_STATUS_IGNORE);
-        MPI_Wait(&reqRecvLeft, MPI_STATUS_IGNORE);
+            for(int i=0, j=int(isRight_red);    i<=size_right_n, j<Ny+2;    i++, j+=2){
+                U_right_R[i]=U_loc[(Nx_local)*(Ny+2)+j];}
+            // if(l==1) cout<<"right "<<myRank<<" to "<<myRank+1<<'\n';
+            MPI_Isend (&U_right_R[0], Ny+2,MPI_DOUBLE,myRank+1,1,MPI_COMM_WORLD,&reqSendRight);
+            MPI_Irecv (&U_right_R[0], Ny+2,MPI_DOUBLE,myRank+1,0,MPI_COMM_WORLD,&reqRecvRight);
+            MPI_Wait(&reqSendRight, MPI_STATUS_IGNORE);
+            MPI_Wait(&reqRecvRight, MPI_STATUS_IGNORE);
+            for(int i=0, j=int(not isRight_red);        i<=size_right_n, j<Ny+2;    i++, j+=2){
+                U_loc[(Nx_local+1)*(Ny+2)+j]=U_right_R[i];}
         }
-        if(myRank < nbTask-1){
-        MPI_Wait(&reqSendRight, MPI_STATUS_IGNORE);
-        MPI_Wait(&reqRecvRight, MPI_STATUS_IGNORE);
-        }
+        
     
         // cout<<myRank<<" a envoyé et reçu ses données updates \n";
 
         for(int i=1; i<Nx_local+1;i++)
         {
-            x = i*dx;
+            x = (i+decalage)*dx;
             for(int j=1;j<Ny+1;j++)
             {
                 y = j*dy;
@@ -257,7 +270,7 @@ int main(int argc, char* argv[])
         }
         U_loc.swap(U_loc_Next);
         
-        // cout<<myRank<<" a calculé pour les noeuds noires  \n";
+        // cout<<myRank<<" a fini l iteration "<<l<<"\n";
     }
 
 // ===========================================================================================
@@ -280,8 +293,7 @@ int main(int argc, char* argv[])
         }
 
         // Réception des autres process (myRank != 0)
-        for (int p=1; p<nbTask; p++)
-        {
+        for (int p=1; p<nbTask; p++) {
             int taille_bloc = Nx / nbTask;
             int reste = Nx % nbTask;
             int Nx_p = taille_bloc + (p < reste ? 1 : 0);
@@ -297,7 +309,6 @@ int main(int argc, char* argv[])
                     U_global[(i_global)*(Ny+2) + j] = temp[i_local*(Ny+2) + j];
                 }
             }
-
             // Prendre en compte la cellule Nx_p pour p = nbTask-1 pour avoir les conditions de bord droit du domaine
             if (p == nbTask - 1) {
                 for (int j=0; j<Ny+2; j++) {
@@ -305,7 +316,6 @@ int main(int argc, char* argv[])
                 }
             }
         }
-
         if (nbTask == 1) {
             for (int j=0; j<Ny+2; j++) {
                 U_global[(Nx+1)*(Ny+2) + j] = U_loc[(Nx_local+1)*(Ny+2)+j];
@@ -321,7 +331,8 @@ int main(int argc, char* argv[])
             }
         }
         myfile.close();
-        cout << "Sauvegarde dans U_sol.txt effectuée." << endl;
+        cout << "Sauvegarde dans u_sol.txt effectuée." << endl;
+
     
     vector<double> U_diff((Ny+2)*(Nx+2));
 
