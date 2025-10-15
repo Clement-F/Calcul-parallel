@@ -160,9 +160,12 @@ int main(int argc, char* argv[])
 
 
     vector<double> U_left_R(size_flank), U_right_R(size_flank), U_left_N(size_flank), U_right_N(size_flank); 
-    vector<double> U_left(Ny+2), U_right(Ny+2); 
 
+    int counter = 0;
+    if(myRank ==0)
+    {
     cout<<'\n';
+    }
 
     // scheme
     double t=0;
@@ -190,10 +193,8 @@ int main(int argc, char* argv[])
             for(int i=0;     i<Ny+2;     i++){
                 if(is_red(i_start,i))
                 { 
-                    U_left[i]=U_loc[Ny+2+i];
-
-                    if(i%2==0){ U_left_R[i/2]    = U_left[i]; if(l==1 && i<=1) cout<<myRank<<" S Left R "<<i<<" \n";}
-                    if(i%2==1){ U_left_R[(i+1)/2]= U_left[i]; if(l==1 && i<=1) cout<<myRank<<" S Left R "<<i<<" \n";}
+                    if(i%2==0){ U_left_R[i/2]    = U_loc[Ny+2+i]; if(l==1 && i<=1) cout<<myRank<<" S Left R "<<i<<" \n";}
+                    if(i%2==1){ U_left_R[(i+1)/2]= U_loc[Ny+2+i]; if(l==1 && i<=1) cout<<myRank<<" S Left R "<<i<<" \n";}
                 } 
                 // cout<<"R "<<i<<" "<<Ny+2+j<<'\n';
             }
@@ -207,10 +208,8 @@ int main(int argc, char* argv[])
             for(int i=0;     i<Ny+2;     i++){
                 if(is_red(i_start-1,i))
                 { 
-                    if(i%2==0) U_left[i] = U_left_R[i/2];       if(l==1 && i<=1) cout<<"R Left R \n";
-                    if(i%2==1) U_left[i] = U_left_R[(i+1)/2];   if(l==1 && i<=1) cout<<"R Left R \n";
-
-                    U_loc[i]=U_left[i];
+                    if(i%2==0) U_loc[i]= U_left_R[i/2];       if(l==1 && i<=1) cout<<"R Left R \n";
+                    if(i%2==1) U_loc[i]= U_left_R[(i+1)/2];   if(l==1 && i<=1) cout<<"R Left R \n";
                 }
             }
         } 
@@ -221,10 +220,8 @@ int main(int argc, char* argv[])
             for(int i=0;     i<Ny+2;     i++){
                 if(is_red(i_end,i))
                 {
-                     U_right[i]=U_loc[(Nx_local)*(Ny+2)+i];
-
-                    if(i%2==0){ U_right_R[i/2]    = U_right[i];  if(l==1 && i<=1) cout<<myRank<<" S Right R "<<i<<"\n";}
-                    if(i%2==1){ U_right_R[(i+1)/2]= U_right[i];  if(l==1 && i<=1) cout<<myRank<<" S Right R "<<i<<"\n";}
+                    if(i%2==0){ U_right_R[i/2]    =U_loc[(Nx_local)*(Ny+2)+i];  if(l==1 && i<=1) cout<<myRank<<" S Right R "<<i<<"\n";}
+                    if(i%2==1){ U_right_R[(i+1)/2]=U_loc[(Nx_local)*(Ny+2)+i];  if(l==1 && i<=1) cout<<myRank<<" S Right R "<<i<<"\n";}
                 }
             }
             // if(l==1) cout<<"right "<<myRank<<" to "<<myRank+1<<'\n';
@@ -235,10 +232,8 @@ int main(int argc, char* argv[])
             for(int i=0;     i<Ny+2;     i++){
                 if(is_red(i_end+1,i))
                 {
-                    if(i%2==0) U_right[i] = U_right_R[i/2];     if(l==1 && i<=1) cout<<"R Right R \n";
-                    if(i%2==1) U_right[i] = U_right_R[(i+1)/2]; if(l==1 && i<=1) cout<<"R Right R \n";
-
-                    U_loc[(Nx_local+1)*(Ny+2)+i]=U_right[i];
+                    if(i%2==0) U_loc[(Nx_local+1)*(Ny+2)+i]= U_right_R[i/2];     if(l==1 && i<=1) cout<<"R Right R \n";
+                    if(i%2==1) U_loc[(Nx_local+1)*(Ny+2)+i]= U_right_R[(i+1)/2]; if(l==1 && i<=1) cout<<"R Right R \n";
                 } 
             }
         }
@@ -276,10 +271,8 @@ int main(int argc, char* argv[])
             for(int i=0;     i<Ny+2;     i++){
                 if(not is_red(i_start,i))
                 {
-                    U_left[i]=U_loc[Ny+2+i]; 
-
-                    if(i%2==0){ U_left_N[i/2]    = U_left[i]; if(l==1 && i<=1) cout<<myRank<<" S Left N "<<i<<"\n";}
-                    if(i%2==1){ U_left_N[(i+1)/2]= U_left[i]; if(l==1 && i<=1) cout<<myRank<<" S Left N "<<i<<"\n";}
+                    if(i%2==0){ U_left_N[i/2]    =U_loc[Ny+2+i]; if(l==1 && i<=1) cout<<myRank<<" S Left N "<<i<<"\n";}
+                    if(i%2==1){ U_left_N[(i+1)/2]=U_loc[Ny+2+i]; if(l==1 && i<=1) cout<<myRank<<" S Left N "<<i<<"\n";}
                 }
                 // cout<<"N "<<i<<" "<<Ny+2+j<<'\n';
             }
@@ -293,12 +286,8 @@ int main(int argc, char* argv[])
             for(int i=0;     i<Ny+2;     i++){
                 if(not is_red(i_start-1,i))
                 {
-
-                    if(i%2==0) U_left[i] = U_left_N[i/2];       if(l==1 && i<=1) cout<<"R Left N \n";
-                    if(i%2==1) U_left[i] = U_left_N[(i+1)/2];   if(l==1 && i<=1) cout<<"R Left N \n";
-
-                    U_loc[i]=U_left[i];
-
+                    if(i%2==0) U_loc[i]= U_left_N[i/2];       if(l==1 && i<=1) cout<<"R Left N \n";
+                    if(i%2==1) U_loc[i]= U_left_N[(i+1)/2];   if(l==1 && i<=1) cout<<"R Left N \n";
                 }
             }
         } 
@@ -310,10 +299,8 @@ int main(int argc, char* argv[])
             {
                 if(not is_red(i_end,i))
                 {
-                    U_right[i]=U_loc[(Nx_local)*(Ny+2)+i];
-                     
-                    if(i%2==0){ U_right_N[i/2]    = U_right[i];  if(l==1 && i<=1) cout<<myRank<<" S Right N "<<i<<"\n";}
-                    if(i%2==1){ U_right_N[(i+1)/2]= U_right[i];  if(l==1 && i<=1) cout<<myRank<<" S Right N "<<i<<"\n";}
+                    if(i%2==0){ U_right_N[i/2]    =U_loc[(Nx_local)*(Ny+2)+i];  if(l==1 && i<=1) cout<<myRank<<" S Right N "<<i<<"\n";}
+                    if(i%2==1){ U_right_N[(i+1)/2]=U_loc[(Nx_local)*(Ny+2)+i];  if(l==1 && i<=1) cout<<myRank<<" S Right N "<<i<<"\n";}
                 }
             }
 
@@ -327,10 +314,8 @@ int main(int argc, char* argv[])
             {
                 if(not is_red(i_end+1,i))
                 { 
-                    if(i%2==0) U_right[i] = U_right_N[i/2];     if(l==1 && i<=1) cout<<"R Right N \n";
-                    if(i%2==1) U_right[i] = U_right_N[(i+1)/2]; if(l==1 && i<=1) cout<<"R Right N \n";
-
-                    U_loc[(Nx_local+1)*(Ny+2)+i]=U_right[i];
+                    if(i%2==0) U_loc[(Nx_local+1)*(Ny+2)+i]= U_right_N[i/2];     if(l==1 && i<=1) cout<<"R Right N \n";
+                    if(i%2==1) U_loc[(Nx_local+1)*(Ny+2)+i]= U_right_N[(i+1)/2]; if(l==1 && i<=1) cout<<"R Right N \n";
 
                 }
             }
@@ -451,8 +436,6 @@ int main(int argc, char* argv[])
         MPI_Send(U_loc.data(), (Nx_local+2)*(Ny+2), MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
     }
 
-
-    
     cout<<myRank<<" has ended its watch \n";
     MPI_Finalize();
 
