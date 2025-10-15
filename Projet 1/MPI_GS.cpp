@@ -88,6 +88,7 @@ int main(int argc, char* argv[])
 
     // Paramètres du problème
 
+
     a = 1;          b  = 1;      
     Time = 1;       dt = Time/Nt; 
     U0 = 1;         alpha = 0.5;
@@ -125,12 +126,12 @@ int main(int argc, char* argv[])
     int decalage = myRank * taille_bloc + min(myRank, reste);       // Nombre de points déjà attribués avant ce process
     
     int i_start = 1+ decalage;
-    int i_end = i_start + Nx_local - 1;
+    int i_end = i_start + Nx_local -1;
 
-    cout<<"process "<<myRank<<" operates between "<<i_start<<" and "<<i_end<<" it has "<<Nx_local<<" nodes \n";
+    cout<<"process "<<myRank<<" operates between "<<i_start<<" and "<<i_end<<" it has "<<Nx_local<<" nodes and "<<decalage<<" nodes have already been affected \n";
     
-    bool isLeft_red =(i_start %2==0);
-    bool isRight_red=(i_end  %2==0);
+    bool isLeft_red =((i_start-1) %2==0);
+    bool isRight_red=((i_end+1)  %2==0);
 
     // solution du probleme
     vector<double> U_loc  ((Nx_local+2)*(Ny+2));            // vecteur de la solution du probleme au temps t
@@ -166,8 +167,8 @@ int main(int argc, char* argv[])
     {   
         t=t+dt;
         if(myRank ==0){
-        double progress = round(double(l)/Nt*10000)/100;
-        if(progress - int(progress)<10e-7) cout<<"progress : "<<progress<<"%  t="<<t<<'\n';}
+        double progress = round(double(l)/Nt*100000)/1000;
+        if(((progress - floor(progress))<10e-9) && int(progress)%10==0 ) cout<<"progress : "<<progress<<"%  t="<<t<<'\n';}
         
     // =============================================================================
     // =============================================================================
@@ -184,50 +185,49 @@ int main(int argc, char* argv[])
     // =============================================================================
 
         if(myRank>0){
-            for(int i=0, j=int(not isLeft_red);  i<=size_left_n, j<Ny+2;     i++)
+            for(int i=0, j=int (isLeft_red);  i<size_left_n, j<Ny+2;     i++)
             {
-                // if(is_red(i_start+1,j)) {cout<<"mauvais signale R sent L (" <<i_start+1<<','<<j<<")\n";}
-                U_left_R[i]=U_loc[Ny+2+j]; 
+                if(not is_red(i_start,j)) {cout<<"mauvais signale R sent L (" <<i_start<<','<<j<<")\n";}
+                U_left_R[i]=U_loc[1*(Ny+2) + j]; 
+                // if(l==1){cout<<myRank<<" (" <<i_start<<','<<j<<") \n"; }
                 j+=2;
+
             }
 
             MPI_Isend(&U_left_R[0], size_left_n,MPI_DOUBLE,myRank-1,0,MPI_COMM_WORLD,&reqSendLeft);
             MPI_Irecv(&U_left_R[0], size_left_r,MPI_DOUBLE,myRank-1,1,MPI_COMM_WORLD,&reqRecvLeft);
-            // MPI_Wait(&reqSendLeft, MPI_STATUS_IGNORE);
             MPI_Wait(&reqRecvLeft, MPI_STATUS_IGNORE);
 
-            if(l==1)cout<<myRank<<" "<<size_left_n<<" "<<size_left_r<<" \n";
-
-            for(int i=0, j=int(isLeft_red);         i<=size_left_r, j<Ny+2;     i++)
+            for(int i=0, j=int(not isLeft_red);  i<Ny/2, j<Ny+2;     i++)
             {
-                // if(is_red(i_start,j))   {cout<<"mauvais signale R recv L (" <<i_start<<','<<j<<") \n";}
-                U_loc[j]=U_left_R[i];
+                if(not is_red(i_start-1,j))   {cout<<"mauvais signale R recv L (" <<i_start-1<<','<<j<<") \n";}
+                U_loc[j]=U_left_R[0*(Ny+2)+ i];
+                // if(l==1){cout<<myRank<<" (" <<i_start-1<<','<<j<<") \n"; }
                 j+=2;
             }
         } 
 
         if(myRank<nbTask-1){
-            for(int i=0, j=int(not isRight_red);    i<=size_right_n, j<Ny+2;    i++)
+
+            for(int i=0, j=int(isRight_red);    i<Ny/2, j<Ny+2;    i++)
             {
-                // if(is_red(i_end-1,j))   {cout<<"mauvais signale R sent R (" <<i_end-1<<','<<j<<") \n";}
+                if(not is_red(i_end,j))   {cout<<"mauvais signale R sent R (" <<i_end<<','<<j<<") \n";}
                 U_right_R[i]=U_loc[(Nx_local)*(Ny+2)+j];
+                // if(l==1){cout<<myRank<<" (" <<i_end<<','<<j<<") \n"; }
                 j+=2;
             }
 
-
-            // if(l==1) cout<<"right "<<myRank<<" to "<<myRank+1<<'\n';
             MPI_Isend (&U_right_R[0], size_right_n,MPI_DOUBLE,myRank+1,1,MPI_COMM_WORLD,&reqSendRight);
             MPI_Irecv (&U_right_R[0], size_right_r,MPI_DOUBLE,myRank+1,0,MPI_COMM_WORLD,&reqRecvRight);
-            // MPI_Wait(&reqSendRight, MPI_STATUS_IGNORE);
             MPI_Wait(&reqRecvRight, MPI_STATUS_IGNORE);
 
-            if(l==1)cout<<myRank<<" "<<size_right_r<<" "<<size_right_n<<" \n";
-
-            for(int i=0, j=int(isRight_red);        i<=size_right_r, j<Ny+2;    i++)
+            for(int i=0, j=int(not isRight_red);  i<Ny/2, j<Ny+2;    i++)
             {
-                // if(is_red(i_end,j))     {cout<<"mauvais signale R recv L (" <<i_end<<','<<j<<")\n";}
+                if(not is_red(i_end+1,j))     {cout<<"mauvais signale R recv L (" <<i_end+1<<','<<j<<")\n";}
                 U_loc[(Nx_local+1)*(Ny+2)+j]=U_right_R[i];
+                // if(l==1){cout<<myRank<<" (" <<i_end+1<<','<<j<<") \n"; }
                 j+=2;
+                
             }
         }
         
@@ -254,8 +254,6 @@ int main(int argc, char* argv[])
     // =============================================================================
     // =============================================================================
         
-        // cout<<myRank<<" a calculé pour les noeuds rouges \n";
-
         // update de noir
         // phase de com noir
         // envoie de données superflue        
@@ -265,50 +263,49 @@ int main(int argc, char* argv[])
     // =============================================================================
 
         if(myRank>0){
-
-            for(int i=0, j=int(isLeft_red);     i<=size_left_r, j<Ny+2;     i++)
+            for(int i=0, j=int(not isLeft_red);  i<Ny/2, j<Ny+2;     i++)
             {
-                // if(not is_red(i_start+1,j)) {cout<<"mauvais signale N sent L (" <<i_start+1<<','<<j<<")\n";}
-                U_left_N[i]=U_loc[Ny+2+j];
+                if(is_red(i_start,j)) {cout<<"mauvais signale N sent L (" <<i_start<<','<<j<<")\n";}
+                U_left_N[i]=U_loc[Ny+2+j]; 
+                // if(l==1){cout<<myRank<<" (" <<i_start<<','<<j<<") \n"; }
                 j+=2;
             }
 
-            if(l==1) cout<<"left "<<myRank<<" to "<<myRank-1<<'\n';
             MPI_Isend(&U_left_N[0], size_left_r,MPI_DOUBLE,myRank-1,0,MPI_COMM_WORLD,&reqSendLeft);
             MPI_Irecv(&U_left_N[0], size_left_n,MPI_DOUBLE,myRank-1,1,MPI_COMM_WORLD,&reqRecvLeft);
-            // MPI_Wait(&reqSendLeft, MPI_STATUS_IGNORE);
             MPI_Wait(&reqRecvLeft, MPI_STATUS_IGNORE);
 
-            for(int i=0, j=int(not isLeft_red); i<=size_left_n, j<Ny+2;     i++)
+            for(int i=0, j=int(isLeft_red);         i<=Ny/2, j<Ny+2;     i++)
             {
-                // if(not is_red(i_start,j))   {cout<<"mauvais signale N recv L (" <<i_start<<','<<j<<")\n";}
+                if(is_red(i_start-1,j))   {cout<<"mauvais signale N recv L (" <<i_start-1<<','<<j<<") \n";}
                 U_loc[j]=U_left_N[i];
+                // if(l==1){cout<<myRank<<" (" <<i_start-1<<','<<j<<") \n"; }
                 j+=2;
             }
         } 
-    
-    // =============================================================================
+        
     // =============================================================================
 
         if(myRank<nbTask-1){
-
-            for(int i=0, j=int(isRight_red);    i<=size_right_r, j<Ny+2;    i++)
+            for(int i=0, j=int(not isRight_red); i<Ny/2, j<Ny+2;    i++)
             {
-                // if(not is_red(i_end-1,j))   {cout<<"mauvais signale N sent R (" <<i_end-1<<','<<j<<")\n";}
-                U_right_R[i]=U_loc[(Nx_local)*(Ny+2)+j];
+                if(is_red(i_end,j))   {cout<<"mauvais signale N sent R (" <<i_end<<','<<j<<") \n";}
+                U_right_N[i]=U_loc[(Nx_local)*(Ny+2)+j];
+                // if(l==1){cout<<myRank<<" (" <<i_end<<','<<j<<") \n"; }
                 j+=2;
             }
 
-            MPI_Isend (&U_right[0], size_right_r,MPI_DOUBLE,myRank+1,1,MPI_COMM_WORLD,&reqSendRight);
-            MPI_Irecv (&U_right[0], size_right_n,MPI_DOUBLE,myRank+1,0,MPI_COMM_WORLD,&reqRecvRight);
-            // MPI_Wait(&reqSendRight, MPI_STATUS_IGNORE);
+
+            // if(l==1) cout<<"right "<<myRank<<" to "<<myRank+1<<'\n';
+            MPI_Isend (&U_right_N[0], size_right_r,MPI_DOUBLE,myRank+1,1,MPI_COMM_WORLD,&reqSendRight);
+            MPI_Irecv (&U_right_N[0], size_right_n,MPI_DOUBLE,myRank+1,0,MPI_COMM_WORLD,&reqRecvRight);
             MPI_Wait(&reqRecvRight, MPI_STATUS_IGNORE);
 
-
-            for(int i=0, j=int(not isRight_red);        i<=size_right_n, j<Ny+2;    i++)
+            for(int i=0, j=int(isRight_red); i<Ny/2, j<Ny+2;    i++)
             {
-                // if(not is_red(i_end,j))     {cout<<"mauvais signale N recv R (" <<i_end<<','<<j<<")\n";}
-                U_loc[(Nx_local+1)*(Ny+2)+j]=U_right_R[i];
+                if(is_red(i_end+1,j))     {cout<<"mauvais signale N recv L (" <<i_end+1<<','<<j<<")\n";}
+                U_loc[(Nx_local+1)*(Ny+2)+j]=U_right_N[i];
+                // if(l==1){cout<<myRank<<" (" <<i_end+1<<','<<j<<") \n"; }
                 j+=2;
             }
         }
@@ -325,7 +322,7 @@ int main(int argc, char* argv[])
             {
                 y = j*dy;
                 if(not is_red(i,j)){ 
-                // cout<<"Black ,"<<myRank<<" ,"<<is_red(i,j)<<"  ( x:"<<x<<", y:"<<y<<") "<<i<<", "<<j<<"\n";
+                // cout<<"Black ,"<<myRank<<" ,"<<is_red(i,j)<<"  ( x:"<<x<<", y:"<<y<<") "<<i+decalage<<", "<<j<<"\n";
                 U_loc_Next[i*(Ny+2)+j] = 0.25*(U_loc_Next[(i+1)*(Ny+2)+j] + U_loc_Next[i*(Ny+2)+(j+1)]);    
                 U_loc_Next[i*(Ny+2)+j] += 0.25*(U_loc_Next[(i-1)*(Ny+2)+j]+ U_loc_Next[i*(Ny+2)+(j-1)]);    
                 U_loc_Next[i*(Ny+2)+j] += -0.25* dx2 *f(x,y);                                               
@@ -420,8 +417,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    cout<<"norme infini \n";
-    cout<<*max_element(U_diff.begin() , U_diff.end())<<" "<<endl;
+    cout<<"=========================== \nnorme infini \n"<<*max_element(U_diff.begin() , U_diff.end())<<" \n=========================== \n";
 
     // save to file
     // sol_to_file(U_diff,"U_sol");   
