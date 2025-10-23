@@ -24,7 +24,8 @@ double Time;                // Temps d arret
 double dx,dy,h;             // space step
 double dt;                  // time step
 double U0, alpha;
-double tol = 1e-6;   // Tolérance de l'algorithme (critère d'arrêt)
+double tol = 1e-7;          // Tolérance de l'algorithme (critère d'arrêt)
+bool EtudeErr = false;      // Résolution du problème original (false) OU Etude de l'erreur sur solution particulère (true)
 
 using namespace std;
 
@@ -100,6 +101,8 @@ double GS(){
     
     // init U
     double x,y;
+    if(EtudeErr)
+    {
     for(int i=0; i<Nx+2;i++){
         x = i*dx;
         U[i*(Ny+2)]=        u_ex(x,0);      U_Next[i*(Ny+2)]=        u_ex(x,0);         // bas
@@ -117,6 +120,21 @@ double GS(){
     for(int i=1;i<Nx+1;i++){ for(int j=1;j<Ny+1;j++){
         U[i*(Ny+2)+j] = 0;
     }}
+    }
+    else
+    {
+    for(int i=0; i<Nx+2;i++){
+        x = i*dx;
+        U[i*(Ny+2)]=        U0;      U_Next[i*(Ny+2)]=          U0;         // bas
+        U[i*(Ny+2)+(Ny+1)]= U0;      U_Next[i*(Ny+2)+(Ny+1)]=   U0;         // haut
+    }
+
+    for(int j=0; j<Ny+2;j++){
+        y = j*dy;
+        U[j] =                V(y);    U_Next[j] =              V(y);       // gauche
+        U[(Nx+1)*(Ny+2) +j] = U0;    U_Next[(Nx+1)*(Ny+2) +j] = U0;         // droite
+    }
+    }
 
     // scheme
     double t=0;
@@ -137,19 +155,20 @@ double GS(){
             for(int j=1;j<Ny+1;j++)
             {
                 y = j*dy;
-                U_Next[i*(Ny+2)+j] = cste*(U[(i+1)*(Ny+2)+j]*dx_2 + U[i*(Ny+2)+(j+1)]*dy_2);      // termes non update de GS
+
+                U_Next[i*(Ny+2)+j] = cste*(U[(i+1)*(Ny+2)+j]*dx_2 + U[i*(Ny+2)+(j+1)]*dy_2);            // termes non update de GS
                 U_Next[i*(Ny+2)+j] += cste*(U_Next[(i-1)*(Ny+2)+j]*dx_2+ U_Next[i*(Ny+2)+(j-1)]*dy_2);  // termes update de GS
                 U_Next[i*(Ny+2)+j] += -cste* f(x,y);                                                    // terme de bord
                 
                 // Calcul de la norme du résidu
                 laplacien = 1/(dx*dx) * (U[(i+1)*(Ny+2) + j] - 2*U[i*(Ny+2) + j] + U[(i-1)*(Ny+2) + j]);
                 laplacien+= 1/(dy*dy) * (U[(i*(Ny+2) + j+1)] - 2*U[i*(Ny+2) + j] + U[i*(Ny+2) + j-1])  ;
-                residu    = abs(-laplacien + f(x,y));
-                maxResidu = max( maxResidu, residu);
-                // if(residu >= tol) cout<<"( x:"<<x<<", y:"<<y<<") "<<i<<", "<<j<<"\n";
+
+                residu    = abs(-laplacien + f(x,y));          maxResidu = max( maxResidu, residu);
             } 
         }
         U.swap(U_Next);
+
         double progress = round(double(l)/Nt*10000)/100;
         if(int(double(l)/Nt*100000)%1000==0) cout<<"progress : "<<progress<<"%  erreur :"<<maxResidu<<'\n';
 
@@ -157,6 +176,8 @@ double GS(){
     }
     cout<<"le process a fini en "<<l<<" etapes \n";
     
+    if(EtudeErr)
+    {
     vector<double> U_diff((Ny+2)*(Nx+2)); // U_diff = U_GS - U_ex
 
     // calcul l'erreur en norme inf de GS
@@ -167,21 +188,14 @@ double GS(){
         for(int j=0;j<Ny+2;j++)
         {
             y = j*dy;
-            
             U_diff[i*(Ny+2)+j] = abs( U[i*(Ny+2)+j] - u_ex(x,y));
-
-            if(U_diff[i*(Ny+2)+j] >0.5)
-            {
-                // cout<<"( x:"<<x<<", y:"<<y<<") "<<i<<", "<<j<<"\n";
-                // cout<<U_diff[i*(Ny+2)+j]<<'\n'<<U[i*(Ny+2)+j]<<'\n'<<u_ex(x,y)<<'\n';
-            }
-
         }
     }
 
     cout<<"norme infini \n";
     // calcul de la norme
     cout<<*max_element(U_diff.begin() , U_diff.end())<<" "<<endl;
+    }
 
     // save to file
     // sol_to_file(U_diff,"U_sol");   
@@ -203,21 +217,25 @@ int main (int argc, char* argv[])
     // vector<double> norme_inf;
     vector<double> iter_conv;
 
-    Nx = 50;  Ny = Nx;
+    Nx = 256;  Ny = Nx;
     dx = a/(Nx+1);  dy = b/(Ny+1);
-    Nt = 10000;      dt = Time/Nt; 
-    // GS();
+    Nt = 100000;      dt = Time/Nt; 
+    GS();
 
-    for(int k=4;k<=7;k++)
-    {
-        cout<<"============= "<<k<<" ===================== \n";
-        Nx = int(pow(2,k));  Ny = Nx;
-        dx = a/(Nx+1);  dy = b/(Ny+1);
-        dt = Time/Nt; 
-        // norme_inf.push_back( GS());
-        iter_conv.push_back(GS());
 
-    }
+
+
+    // for(int k=4;k<=7;k++)
+    // {
+    //     cout<<"============= "<<k<<" ===================== \n";
+    //     Nx = int(pow(2,k));  Ny = Nx;
+    //     dx = a/(Nx+1);  dy = b/(Ny+1);
+    //     dt = Time/Nt; 
+    //     // norme_inf.push_back( GS());
+    //     iter_conv.push_back(GS());
+
+    // }
+    
     save_to_file(iter_conv,"iter_conv");
     // save_to_file(norme_inf,"norme_inf");   
 
