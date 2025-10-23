@@ -24,10 +24,10 @@ if Jacobi:
 if GaussSeidel:
     if noPara:
         # Erreurs sequentielle
-        err_list2 = np.array([0.00990802, 0.0028265, 0.000753881, 0.000194576, 4.94183e-05, 1.2452e-05])
+        err_list2 = np.array([0.00990802,   0.0028265, 0.000753881, 0.000194576, 4.94183e-05, 1.2452e-05])
     else:
         # Erreurs avec parallélisation, P=4
-        err_list2 = np.array([0.00990802, 0.0028265, 0.000753881, 0.000194576, 4.94183e-05, 1.2452e-05 ])
+        err_list2 = np.array([0.00990802,   0.0028265, 0.000753881, 0.000194576, 4.94183e-05, 1.2452e-05 ])
 
 
 fig, ax = plt.subplots(figsize=(6,4), dpi=250)

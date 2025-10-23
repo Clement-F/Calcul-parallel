@@ -25,7 +25,7 @@ double dx,dy,h;             // space step
 double dt;                  // time step
 double U0, alpha;
 double tol = 1e-12;          // Tolérance de l'algorithme (critère d'arrêt)
-bool EtudeErr = false;      // Résolution du problème original (false) OU Etude de l'erreur sur solution particulère (true)
+bool EtudeErr = true;      // Résolution du problème original (false) OU Etude de l'erreur sur solution particulère (true)
 
 using namespace std;
 
@@ -220,15 +220,15 @@ int main (int argc, char* argv[])
     vector<double> norme_inf;
     // vector<double> iter_conv;
 
-    // Nx = 256;  Ny = Nx;
-    // dx = a/(Nx+1);  dy = b/(Ny+1);
-    // Nt = 100000;      dt = Time/Nt; 
-    // GS();
+    Nx = 8;  Ny = Nx;
+    dx = a/(Nx+1);  dy = b/(Ny+1);
+    Nt = 100000;      dt = Time/Nt; 
+    // norme_inf.push_back( GS());
 
 
 
 
-    for(int k=4;k<=8;k++)
+    for(int k=3;k<=8;k++)
     {
         cout<<"============= "<<k<<" ===================== \n";
         Nx = int(pow(2,k));  Ny = Nx;
