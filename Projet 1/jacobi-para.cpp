@@ -20,7 +20,7 @@ double alpha = 0.5;  // Conditions aux bords 2
 int Nx, Ny;          // # pas d'espace horizontal, # pas d'espace vertical
 double dx;           // Pas d'espace horizontal
 double dy;           // Pas d'espace vertical
-int Nmax = 200000;   // Nombre d'itérations max de l'algorithme
+int Nmax = 8000;   // Nombre d'itérations max de l'algorithme
 double tol = 1e-6;   // Tolérance de l'algorithme (critère d'arrêt)
 bool EtudeErr = true; // Résolution du problème original (false) OU Etude de l'erreur sur solution particulère (true)
 
@@ -203,6 +203,7 @@ int main(int argc, char* argv[])
     double time2 = MPI_Wtime();
     if (myRank == 0) {
         cout << "Runtime: " << time2 - time1 << " secondes" << endl;
+        cout << "Itérations: " << iteration << endl;
         if (maxResidu <= tol) {
             cout << "Convergence après " << iteration << " itérations." << endl;
             cout << "Résidu max final: " << maxResidu << "." << endl;
