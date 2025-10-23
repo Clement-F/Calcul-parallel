@@ -6,7 +6,8 @@ noPara = True
 GaussSeidel = True
 Jacobi = False
 
-N_list = np.array([8, 16, 32, 64, 128])
+if Jacobi :         N_list = np.array([8, 16, 32, 64, 128])
+if GaussSeidel :    N_list = np.array([8, 16, 32, 64, 128, 256])
 h_list = np.zeros(N_list.size)
 for i, N in enumerate(N_list):
     h_list[i] = a/(N_list[i]+1)
@@ -21,8 +22,12 @@ if Jacobi:
         err_list = np.array([0.00990807, 0.00282655, 0.000753932, 0.000199798, 4.94689e-05])
 
 if GaussSeidel:
-    # Erreurs Gauss-Seidel
-    err_list2 = np.array([0.00990797, 0.00282644, 0.000753813, 0.000194506, 4.93482e-05])
+    if noPara:
+        # Erreurs sequentielle
+        err_list2 = np.array([0.00990802, 0.0028265, 0.000753881, 0.000194576, 4.94183e-05, 1.2452e-05])
+    else:
+        # Erreurs avec parallélisation, P=4
+        err_list2 = np.array([0.00990802, 0.0028265, 0.000753881, 0.000194576, 4.94183e-05, 1.2452e-05 ])
 
 
 fig, ax = plt.subplots(figsize=(6,4), dpi=250)
@@ -41,4 +46,4 @@ ax.loglog()
 ax.grid()
 ax.legend()
 plt.tight_layout()
-plt.show()
+plt.savefig("convergence.png")

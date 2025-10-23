@@ -24,7 +24,7 @@ double Time;                // Temps d arret
 double dx,dy,h;             // space step
 double dt;                  // time step
 double U0, alpha;
-double tol = 1e-7;          // Tolérance de l'algorithme (critère d'arrêt)
+double tol = 1e-12;          // Tolérance de l'algorithme (critère d'arrêt)
 bool EtudeErr = false;      // Résolution du problème original (false) OU Etude de l'erreur sur solution particulère (true)
 
 using namespace std;
@@ -143,6 +143,8 @@ double GS(){
     double maxResidu = tol + 1.0;   // Norme infinie du résidu
     double residu;                  // Résidu || Ax^l
     double cste = 1./(2*dx_2 + 2*dy_2);
+    
+    int progress= 0 ; int precision = 10;
 
     while ((l<Nt && maxResidu > tol))
     {   
@@ -169,8 +171,7 @@ double GS(){
         }
         U.swap(U_Next);
 
-        double progress = round(double(l)/Nt*10000)/100;
-        if(int(double(l)/Nt*100000)%1000==0) cout<<"progress : "<<progress<<"%  erreur :"<<maxResidu<<'\n';
+        if(progress * Time/precision<t){cout<<"progress : "<<(t*100)<<"%  erreur :"<<maxResidu<<'\n'; progress +=1;}
 
     
     }
@@ -195,14 +196,16 @@ double GS(){
     cout<<"norme infini \n";
     // calcul de la norme
     cout<<*max_element(U_diff.begin() , U_diff.end())<<" "<<endl;
+    
+    return (*max_element(U_diff.begin() , U_diff.end()));
     }
 
     // save to file
     // sol_to_file(U_diff,"U_sol");   
 
     // return (*max_element(U_diff.begin() , U_diff.end()));
-    return l;
-    // return 0;
+    // return l;
+    return 0;
 }
 
 int main (int argc, char* argv[])
@@ -214,30 +217,32 @@ int main (int argc, char* argv[])
     Time = 1;       dt = Time/Nt; 
     U0 = 1;         alpha = 0.5;
 
-    // vector<double> norme_inf;
-    vector<double> iter_conv;
+    vector<double> norme_inf;
+    // vector<double> iter_conv;
 
-    Nx = 256;  Ny = Nx;
-    dx = a/(Nx+1);  dy = b/(Ny+1);
-    Nt = 100000;      dt = Time/Nt; 
-    GS();
-
-
+    // Nx = 256;  Ny = Nx;
+    // dx = a/(Nx+1);  dy = b/(Ny+1);
+    // Nt = 100000;      dt = Time/Nt; 
+    // GS();
 
 
-    // for(int k=4;k<=7;k++)
-    // {
-    //     cout<<"============= "<<k<<" ===================== \n";
-    //     Nx = int(pow(2,k));  Ny = Nx;
-    //     dx = a/(Nx+1);  dy = b/(Ny+1);
-    //     dt = Time/Nt; 
-    //     // norme_inf.push_back( GS());
-    //     iter_conv.push_back(GS());
 
-    // }
+
+    for(int k=4;k<=8;k++)
+    {
+        cout<<"============= "<<k<<" ===================== \n";
+        Nx = int(pow(2,k));  Ny = Nx;
+        
+        Nt =10*Nx*Nx+1000;
+        dx = a/(Nx+1);  dy = b/(Ny+1);
+        dt = Time/Nt; 
+        norme_inf.push_back( GS());
+        // iter_conv.push_back(GS());
+
+    }
     
-    save_to_file(iter_conv,"iter_conv");
-    // save_to_file(norme_inf,"norme_inf");   
+    // save_to_file(iter_conv,"iter_conv");
+    save_to_file(norme_inf,"norme_inf");   
 
 
 }
