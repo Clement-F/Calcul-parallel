@@ -13,7 +13,7 @@ if ensta:
 
     #mesures
     T_ensta_J = np.array([1.9861, 2.08667, 2.23234, 2.36097, 4.53718, 5.04197, 5.82658, 7.03631])
-    T_ensta_GS = np.array([6.48086, 13.5267, 21.8505, 30.1659, 72.3862, 90.7497, 108.626, 124.006])
+    T_ensta_GS = np.array([1.04718, 1.08405, 1.18976, 1.23185, 2.34909, 2.48558, 2.84911, 2.867])
     Efficiency_ensta_J = np.zeros(P_list_ensta.size)
     Efficiency_ensta_GS = np.zeros(P_list_ensta.size)
 
@@ -35,7 +35,7 @@ if ensta:
     ax.set_ylabel('Efficacité')
     ax.set_ylim(0,1.1); ax.set_xlim(1,P_ensta)
     plt.tight_layout()
-    plt.savefig("Comp_Efficency_Ensta.png")
+    plt.savefig("Efficency_Ensta.png")
 
 # Cholesky
 if cholesky:
@@ -44,7 +44,7 @@ if cholesky:
     # Nx = 32, 64, 128, 256, 512, 768, 1024, 1536, 2048
     # mesures
     T_cholesky_J = np.array([2.47246, 2.53846, 2.84465, 2.97019, 3.0464, 3.10246, 3.13227, 3.22837, 3.29659])   #Ny=64
-    T_cholesky_GS = np.array([ 4.9203,  5.17258, 5.89991, 5.54644, 6.09767, 6.3301,  5.9172, 6.27985, 5.71819]) #Ny =256
+    T_cholesky_GS= np.array([4.9203,  5.17258, 5.89991, 5.54644, 6.09767, 6.3301,  5.9172, 6.27985, 5.71819])   #Ny =256
 
     Efficiency_cholesky_J = np.zeros(P_list_cholesky.size)
     Efficiency_cholesky_GS = np.zeros(P_list_cholesky.size)
@@ -56,7 +56,7 @@ if cholesky:
         Efficiency_cholesky_GS[i] = T_cholesky_GS[0]/(T_cholesky_GS[i])
 
     fig, ax = plt.subplots(figsize=(6,4), dpi=250)
-    # ax.plot(P_list_cholesky, Efficiency_cholesky_J, '-o', label='Jacobi', color='green')
+    ax.plot(P_list_cholesky, Efficiency_cholesky_J, '-o', label='Jacobi', color='green')
     ax.plot(P_list_cholesky, Efficiency_cholesky_GS, '-o', label='Gauss-Seidel', color='red')
     ax.plot(P_list_cholesky, np.ones(P_list_cholesky.size),'--' , label='Idéal', color='black')
     ax.legend()

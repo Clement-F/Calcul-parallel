@@ -23,6 +23,9 @@ for i in range(Nx+2):
     for j in range(Ny+2):
         U[i,j] = (float(lines[i*(Ny+2)+j]))
 
+m = np.min(U)
+M = np.max(U)
+
 
 fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
 ax.plot_surface(X, Y, U.T, cmap=cm.viridis)
@@ -34,7 +37,7 @@ ax.set_zlabel("u(x,y)")
 
 xlim = (0,1)
 ylim = (0,1)
-zlim = (0,1)
+zlim = (m,M)
 ax.set_xlim(xlim)
 ax.set_ylim(ylim)
 ax.set_zlim(zlim)
@@ -43,69 +46,3 @@ ax.set(xticklabels=[],
        zticklabels=[])
 
 plt.show()
-
-# ===============================================================================
-# ===============================================================================
-
-# f = open("norme_inf.txt", "r")
-# lines = f.readlines()
-
-# U=[]
-
-# for line in lines: 
-#     U.append(float(line))
-
-# K = np.linspace(4,4-1+len(lines),len(lines))
-
-# I = 2**K; I=1/I
-# print(I)
-# X2 = I**2
-# X1 = I
-# # X1 = 1/I; X2 = 1/X2
-# # X1 /=U[0]; X2/=U[0]
-# plt.loglog(I,U,'-o' ,label='err')
-# plt.loglog(I,X1,'--',label='h')
-# plt.loglog(I,X2,'--',label='h^2')
-# plt.grid()
-# plt.legend()
-# plt.xlabel("dx")
-# plt.ylabel("norme inf")
-
-# plt.xlim(I[-1]/1.1,I[0]*1.1)
-# plt.show()
-
-
-# ===============================================================================
-# ===============================================================================
-
-
-# f = open("iter_conv.txt", "r")
-# lines = f.readlines()
-
-# U=[]
-
-# for line in lines: 
-#     U.append(float(line))
-
-# K = np.linspace(4,7,4)
-# K = np.concatenate((K,K))
-# I = 2**K; I=1/I
-
-# print(K)
-# X2 = I**2
-# X1 = I
-# X1 = 1/I; X2 = 1/X2
-
-# print(U,I)
-# plt.grid()
-# plt.loglog(I[:4],U[:4],'-o' ,label='Gauss-Seidel')
-# plt.loglog(I[4:],U[4:],'-o' ,label='Jacobi')
-# plt.loglog(I[:4],X1[:4],'--',label='h^-1')
-# plt.loglog(I[:4],X2[:4],'--',label='h^-2')
-# plt.legend()
-# plt.xlabel("dx")
-# plt.ylabel("nb d'iteration")
-
-# plt.xlim(I[0]*1.1,I[-1]/1.1)
-# plt.show()
-
