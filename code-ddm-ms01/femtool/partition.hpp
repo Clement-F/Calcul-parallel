@@ -20,7 +20,18 @@ Partition4(const Mesh2D& Omega)
         Q.push_back(j,k,0.);}}
 
     int j =0;
-    std::cout<<"\n begin looping \n";
+    std::cout<<"\n begin first loop \n";
+    auto nodes= Omega.nodes(); std::vector<Nodes> Nodes_part(4);
+    for(int i =0;i<Omega.nodes().size();i++)
+    {
+        R3 Point = nodes[i];
+        if(Point[0]<0.5)   {  if (Point[1]<0.5)   {Nodes_part[0].push_back(Point); }
+                                else                {Nodes_part[1].push_back(Point); }}
+        else                {  if (Point[1]<0.5)   {Nodes_part[2].push_back(Point); }
+                                else                {Nodes_part[3].push_back(Point);}}
+    }
+
+    std::cout<<"\n begin second loop \n";
     for (auto el = Omega.begin(); el != Omega.end(); ++el)
     {
         auto element = *el; 
