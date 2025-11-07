@@ -48,7 +48,7 @@ int main(){
   // Manufactured "right hand side"
   auto b    = A(ue);
 
-  int size =30;
+//   int size =30;
 //   std::vector<long double> Conv(size);
   long double Conv;
 

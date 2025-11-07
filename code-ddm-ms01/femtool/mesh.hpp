@@ -165,6 +165,7 @@ void Read(Mesh<DIM>& m,
     for(std::size_t k=0; k<DIM+1; ++k){
       iss >> I;
       I = I-1;
+      // std::cout<<I<<','<<k<<'\t';
       e.push_back(v[I]);
     }
     e.sort();
