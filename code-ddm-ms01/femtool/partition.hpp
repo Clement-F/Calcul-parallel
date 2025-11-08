@@ -19,7 +19,7 @@ Partition4(const Mesh2D& Omega)
     for(int j=0; j<sz; ++j){for(int k=0;k<4;k++){
         Q.push_back(j,k,0.);}}
 
-    int j =0;
+    int coord =0;
     std::cout<<"\n begin first loop \n";
     auto nodes= Omega.nodes(); std::vector<Nodes> Nodes_part(4);
     for(int i =0;i<int(Omega.nodes().size());i++)
@@ -39,12 +39,12 @@ Partition4(const Mesh2D& Omega)
     {
         auto element = *el; 
         R3 Center = Ctr(element);
-        // std::cout<<j<<" element, coord : "<<element<<'\n';
-        if(Center[0]<0.5)   {  if (Center[1]<0.5)   {Meshes[0].push_back(element); Q.push_back(j,0,1.);     }
-                                else                {Meshes[1].push_back(element); Q.push_back(j,1,1.);     }}
-        else                {  if (Center[1]<0.5)   {Meshes[2].push_back(element); Q.push_back(j,2,1.);     }
-                                else                {Meshes[3].push_back(element); Q.push_back(j,3,1.);     }}
-        j++;
+        std::cout<<'\t'<<Center<<'\t';
+        if(Center[0]<0.75)   {  if (Center[1]<0.75)   {Meshes[0].push_back(element); Q.push_back(coord,0,1.);     }
+                                else                {Meshes[1].push_back(element); Q.push_back(coord,1,1.);     }}
+        else                {  if (Center[1]<0.75)   {Meshes[2].push_back(element); Q.push_back(coord,2,1.);     }
+                                else                {Meshes[3].push_back(element); Q.push_back(coord,3,1.);     }}
+        coord++;std::cout<<"\n-----------------\n";
     }
     
     std::cout<<"\n end looping \n";
@@ -52,13 +52,111 @@ Partition4(const Mesh2D& Omega)
 }
 
 
+
+std::pair< Mesh2DPart,CooMatrix<double> >
+Partition4_bis(const Mesh2D& Omega)
+{  
+    
+    std::cout<<"\n instantiation of meshes \n";
+    Mesh2DPart Meshes(4);   int sz = int(Omega.size());
+
+    std::cout<<"\n creation of Q \n";
+    CooMatrix<double> Q(sz,4);
+    for(int j=0; j<sz; ++j){for(int k=0;k<4;k++){
+        Q.push_back(j,k,0.);}}
+
+    double j,k;
+    std::cout<<"\n begin first loop \n";
+    auto nodes= Omega.nodes(); std::vector<Nodes> Nodes_part(4);
+    for(int p =0;p<4;p++)    {
+        j=p/2; k=p%2;
+        for(int i=0;i<int(Omega.nodes().size());i++)
+        {
+        R3 Point = nodes[i];
+        if((Point[0]>j/2 and Point[0]<(j+1)/2)){if(Point[1]>k/2 and Point[1]<(k+1)/2){Nodes_part[p].push_back(Point);};}
+        }
+    }
+
+    for(int i=0; i<4;i++){Meshes[i] = Mesh2D(Nodes_part[i]);}
+
+    long int coord=0; 
+    std::cout<<"\n begin second loop \n";
+    for(int p =0;p<4;p++)    {
+        j=p/2; k=p%2;
+      for (auto el = Omega.begin(); el != Omega.end(); ++el)
+      {
+          Element<2> element = *el; 
+          R3 Center = Ctr(element);
+          std::cout<<p<<'\t'<<Center<<'\t'<<j<<','<<k<<'\t';
+          if((Center[0]>j/2 and Center[0]<(j+1)/2) and (Center[1]>k/2 and Center[1]<(k+1)/2)){std::cout<<"passed";Meshes[p].push_back(element); Q.push_back(coord,p,coord+1); }
+          coord++;std::cout<<"\n-----------------\n";
+    }coord =0; 
+    std::cout<<"\n mesh "<<p<<" has been sorted out \n";}
+    
+    std::cout<<"\n end looping \n";
+    return std::make_tuple(Meshes, Q);
+}
+
+
+
+std::pair< Mesh2DPart,CooMatrix<double> >
+Partition16(const Mesh2D& Omega)
+{  
+    
+    std::cout<<"\n instantiation of meshes \n";
+    Mesh2DPart Meshes(16);   int sz = int(Omega.size());
+
+    std::cout<<"\n creation of Q \n";
+    CooMatrix<double> Q(sz,16);
+    for(int j=0; j<sz; ++j){for(int k=0;k<16;k++){
+        Q.push_back(j,k,0.);}}
+
+    double j,k;
+    std::cout<<"\n begin first loop \n";
+    auto nodes= Omega.nodes(); std::vector<Nodes> Nodes_part(16);
+    for(int p =0;p<16;p++)    {
+        j=p/4; k=p%4;
+        for(int i=0;i<int(Omega.nodes().size());i++)
+        {
+        R3 Point = nodes[i];
+        if((Point[0]>j/4 and Point[0]<(j+1)/4)){if(Point[1]>k/4 and Point[1]<(k+1)/4){Nodes_part[p].push_back(Point);};}
+        }
+    }
+
+    for(int i=0; i<16;i++){Meshes[i] = Mesh2D(Nodes_part[i]);}
+
+    long int coord=0; 
+    std::cout<<"\n begin second loop \n";
+    for(int p =0;p<16;p++)    {
+        j=p/4; k=p%4;
+      for (auto el = Omega.begin(); el != Omega.end(); ++el)
+      {
+          Element<2> element = *el; 
+          R3 Center = Ctr(element);
+          std::cout<<p<<'\t'<<Center<<'\t'<<j<<','<<k<<'\t';
+          if((Center[0]>j/4 and Center[0]<(j+1)/4) and (Center[1]>k/4 and Center[1]<(k+1)/4)){std::cout<<"passed";Meshes[p].push_back(element); Q.push_back(coord,p,coord+1); }
+          coord++;std::cout<<"\n-----------------\n";
+    }coord =0; 
+    std::cout<<"\n mesh "<<p<<" has been sorted out \n";}
+    
+    std::cout<<"\n end looping \n";
+    return std::make_tuple(Meshes, Q);
+}
+
+
+
+
+
+
+
+
 int 
 find_index(const SmallVector<double,3>& ei, const Nodes& Nodes_) // brutefoooooooorce
 {
     for(int i=0; i<int(Nodes_.size()); i++){
-        if(Close(Nodes_[i],ei)){std::cout<<Nodes_[i]<<','<<ei<<'\n';   return i; };
+        if(Close(Nodes_[i],ei)){return i; };
     }
-    return 0;
+    return -1;
 }
 
 
@@ -97,7 +195,6 @@ Plot(const std::vector<Mesh2D>& Sigma,const std::string& filename)
 //   auto v = Sigma[i].nodes();
   for(const auto& x:N[i]){
 
-    // std::cout<<k<<" vectex, coord : "<<x<<'\n';
     f << x << "\t"<<i+1<<"\n"; k++;}
   }
   f << "\n";
@@ -109,12 +206,11 @@ Plot(const std::vector<Mesh2D>& Sigma,const std::string& filename)
   f << tag[2]   << "\n";
   f << el_size << "\n";
   
-  int p, index, temp, decalage;
+  int index, temp, decalage;
 
   for(int i=0;i<int(Sigma.size());i++)
   {
-
-  p=0;  
+  std::cout<<"\n the elements from mesh "<<i<<" have been plotted \n";
   for(const auto& e:Sigma[i]){
     for(std::size_t j=0; j<2+1; ++j){
 
@@ -122,15 +218,14 @@ Plot(const std::vector<Mesh2D>& Sigma,const std::string& filename)
         decalage = 0;   k=0;
         while(index ==0 && k<int(Sigma.size()))
             { 
-            std::cout<<p<<'\n';
             temp = find_index(e[j],N[k]); 
-            if(temp!=0 or p==0){index = temp + decalage;std::cout<<temp<<'\n';}; 
+            if(temp!=-1){index = temp + decalage;}; 
             decalage += N[k].size(); 
             k++;
             }
 
         f << 1+ index << "\t";}
-    f <<i+1<< "\n"; p++;}
+    f <<i+1<< "\n";}
     }
   // Fermeture
   f << "\nEnd";

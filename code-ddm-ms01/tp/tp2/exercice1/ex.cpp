@@ -70,7 +70,7 @@ int main(){
   std::cout <<  Conv << "\n";  
 
   std::pair< Mesh2DPart,CooMatrix<double> > Partition;
-  Partition = Partition4(Omega);
+  Partition = Partition16(Omega);
   Plot(Partition.first, "partition_mesh");
 
 //   Plot(Vh,ue,"ue");

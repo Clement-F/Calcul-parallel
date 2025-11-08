@@ -113,7 +113,6 @@ auto operator*(const S& alpha,
 	       const SmallVector<T,D>& x){
   return SmallVector(x)*=alpha;}
 
-
 template <std::size_t D>
 double operator|(const SmallVector<double,D>& x,
 		 const SmallVector<double,D>& y){
