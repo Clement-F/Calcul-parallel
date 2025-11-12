@@ -45,6 +45,51 @@ Partition4(const Mesh2D& Omega)
     return std::make_tuple(Meshes, Q);
 }
 
+
+
+void overlap(const Mesh2D& m_Omega, Mesh2D m_Gamma)
+{
+
+  int sz = int(m_Omega.nodes().size());
+
+  auto nodes_ = m_Omega.nodes();
+  const auto& v0 = nodes_[0];
+
+  std::vector<int> v(sz);
+  int surcharge=0;
+  for(const auto& el:m_Gamma){
+      surcharge ++;
+      if(surcharge>= sz){auto it = unique(v.begin(), v.end());    v.erase(it, v.end());}
+      for(int j=0;j<3;j++){v.push_back(int(&el[j]-&v0));}
+  }
+
+  auto it = unique(v.begin(), v.end());
+  v.erase(it, v.end());
+
+
+  Mesh2D m_new_Gamma(m_Omega.nodes());
+  int i=0; bool not_in = true;
+  for(const auto& el:m_Omega){
+    i=0;
+// --------------------------------------
+    while(i<int(v.size()) and not_in){  
+      for(int j=0;j<3;j++){         
+        if(int(&el[j]-&v0) ==v[i]){        
+          m_Gamma.push_back(el); 
+          // std::cout<<el[j]<<'\n'<<'\n'<<v[i]<<'\t'<<i<<'\n'; 
+          not_in =false;    
+        } 
+      }     
+      i++;
+    }
+    not_in=true; 
+// -------------------------------------- 
+  }
+  // std::cout<<m_new_Gamma.size();
+  // m_Gamma = m_new_Gamma;
+}
+
+
 std::pair< Mesh2DPart,CooMatrix<double> >
 Partition4(const Mesh2D& Omega, const std::size_t& nl)
 {
@@ -88,37 +133,34 @@ Partition4(const Mesh2D& Omega, const std::size_t& nl)
         else                {  if (Point[1]<0.5)    {noeuds_partition[2].push_back(Point);}
                                 else                {noeuds_partition[3].push_back(Point);}}
     }
-    
+    std::cout<<"\n ------------------------ \n";
+    std::cout<<" le maillage possede "<<noeuds_partition[0].size()<<" noeuds et "<<Meshes[0].size()<<" elements ";
+    std::cout<<"\n adding the "<<1<<" overlap of the "<<1<<"'s mesh  \n";
+    overlap(Omega,Meshes[0]);
 
-    for(int k=0; k<int(nl);k++){
+    std::cout<<" le maillage possede "<<noeuds_partition[0].size()<<" noeuds et "<<Meshes[0].size()<<" elements ";
 
-      for(int p =0; p<4;p++){ // à chaque maillage p 
+    std::cout<<"\n adding the "<<2<<" overlap of the "<<1<<"'s mesh  \n";
+    overlap(Omega,Meshes[0]);
 
-      // ajoute tout les elements qui possède un point en commun avec noeuds_partition
-      std::cout<<"\n adding the "<<k+1<<" overlap of the "<<p+1<<"'s mesh  \n";
+    std::cout<<" le maillage possede "<<noeuds_partition[0].size()<<" noeuds et "<<Meshes[0].size()<<" elements ";
 
-      for(int q =0; q<4;q++){  // dans les autres maillages q
+    std::cout<<"\n adding the "<<3<<" overlap of the "<<1<<"'s mesh  \n";
+    overlap(Omega,Meshes[0]);
 
-        if(p !=q){
-        for (auto el = Meshes[q].begin(); el != Meshes[q].end(); ++el){
-            auto element = *el;
-            
-      // --------------------------------------
+    std::cout<<" le maillage possede "<<noeuds_partition[0].size()<<" noeuds et "<<Meshes[0].size()<<" elements ";
+    std::cout<<"\n ------------------------ \n";
+  //   for(int k=0; k<int(nl);k++){
 
-          for(int i=0; i<int(noeuds_partition[p].size()); i++){
-            for(int j=0;j<3;j++){
-              if(Close(element[j],noeuds_partition[p][i])){
-                Meshes[p].push_back(element);
-              } 
-            }
+  //     for(int p =0; p<4;p++){ // à chaque maillage p 
 
-      // --------------------------------------
-          }
-        }
-      }
-      }
-      }
-  }
+  //     // ajoute tout les elements qui possède un point en commun avec noeuds_partition
+  //     std::cout<<"\n adding the "<<k+1<<" overlap of the "<<p+1<<"'s mesh  \n";
+
+  //     overlap(Omega,Meshes[p]);
+
+  //     }
+  // }
 
 
 
@@ -195,7 +237,7 @@ Plot(const std::vector<Mesh2D>& Sigma,const std::string& filename)
     std::cout<<"\n view sizes \n";
 
 
-  auto nodes_ = Sigma[1].nodes();
+  auto nodes_ = Sigma[0].nodes();
   const auto& v0 = nodes_[0];
   int el_size=0; 
   for(int i=0;i< int(Sigma.size());i++){el_size += Sigma[i].size();} 

@@ -17,7 +17,7 @@ int main(){
   std::cout<<" \n instantiation \n";
 
   // Loading a 2D mesh
-  Read(Omega,"mesh_brut.mesh");
+  Read(Omega,"mesh_fin.mesh");
   
   std::cout<<" \n read \n";
 
