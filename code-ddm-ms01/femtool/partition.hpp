@@ -185,17 +185,17 @@ Partition4_ter(const Mesh2D& Omega)
 
     for(int i=0; i<4;i++){Meshes[i] = Mesh2D(nodes_);}
 
-    long int coord=0; 
+    long int coord=0;  
+    double correction = 1.5;
     std::cout<<"\n begin second loop \n";
     for(int p =0;p<4;p++)    {
         j=p/2; k=p%2;
       for (auto el = Omega.begin(); el != Omega.end(); ++el)
       {
-          Element<2> element = *el; 
+          auto element = *el;
           R3 Center = Ctr(element);
-        //   std::cout<<p<<'\t'<<Center<<'\t'<<j<<','<<k<<'\t';
-          if((Center[0]>j/2 and Center[0]<(j+1)/2) and (Center[1]>k/2 and Center[1]<(k+1)/2)){std::cout<<"passed";Meshes[p].push_back(element); Q.push_back(coord,p,coord+1); }
-          coord++;std::cout<<"\n-----------------\n";
+          if((Center[0]>(j/2 * correction) and Center[0]<((j+1)/2 * correction)) and (Center[1]>(k/2 * correction) and Center[1]<=((k+1)/2* correction))){Meshes[p].push_back(element); Q.push_back(coord,p,coord+1); }
+          coord++;
     }coord =0; 
     std::cout<<"\n mesh "<<p<<" has been sorted out \n";}
     
@@ -338,8 +338,6 @@ Plot_bis(const std::vector<Mesh2D>& Sigma,const std::string& filename)
   f << tag[2]   << "\n";
   f << el_size << "\n";
   
-  int index, temp, decalage;
-
   for(int i=0;i<int(Sigma.size());i++)
   {
   std::cout<<"\n the elements from mesh "<<i<<" have been plotted \n";
