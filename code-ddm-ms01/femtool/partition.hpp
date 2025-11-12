@@ -47,7 +47,7 @@ Partition4(const Mesh2D& Omega)
 
 
 
-void overlap(const Mesh2D& m_Omega, Mesh2D m_Gamma)
+Mesh2D overlap(const Mesh2D& m_Omega, Mesh2D m_Gamma)
 {
 
   int sz = int(m_Omega.nodes().size());
@@ -75,8 +75,7 @@ void overlap(const Mesh2D& m_Omega, Mesh2D m_Gamma)
     while(i<int(v.size()) and not_in){  
       for(int j=0;j<3;j++){         
         if(int(&el[j]-&v0) ==v[i]){        
-          m_Gamma.push_back(el); 
-          // std::cout<<el[j]<<'\n'<<'\n'<<v[i]<<'\t'<<i<<'\n'; 
+          m_new_Gamma.push_back(el); 
           not_in =false;    
         } 
       }     
@@ -86,7 +85,7 @@ void overlap(const Mesh2D& m_Omega, Mesh2D m_Gamma)
 // -------------------------------------- 
   }
   // std::cout<<m_new_Gamma.size();
-  // m_Gamma = m_new_Gamma;
+  return m_new_Gamma;
 }
 
 
@@ -136,17 +135,17 @@ Partition4(const Mesh2D& Omega, const std::size_t& nl)
     std::cout<<"\n ------------------------ \n";
     std::cout<<" le maillage possede "<<noeuds_partition[0].size()<<" noeuds et "<<Meshes[0].size()<<" elements ";
     std::cout<<"\n adding the "<<1<<" overlap of the "<<1<<"'s mesh  \n";
-    overlap(Omega,Meshes[0]);
+    Meshes[0]= overlap(Omega,Meshes[0]);
 
     std::cout<<" le maillage possede "<<noeuds_partition[0].size()<<" noeuds et "<<Meshes[0].size()<<" elements ";
 
     std::cout<<"\n adding the "<<2<<" overlap of the "<<1<<"'s mesh  \n";
-    overlap(Omega,Meshes[0]);
+    Meshes[0]= overlap(Omega,Meshes[0]);
 
     std::cout<<" le maillage possede "<<noeuds_partition[0].size()<<" noeuds et "<<Meshes[0].size()<<" elements ";
 
     std::cout<<"\n adding the "<<3<<" overlap of the "<<1<<"'s mesh  \n";
-    overlap(Omega,Meshes[0]);
+    Meshes[0]= overlap(Omega,Meshes[0]);
 
     std::cout<<" le maillage possede "<<noeuds_partition[0].size()<<" noeuds et "<<Meshes[0].size()<<" elements ";
     std::cout<<"\n ------------------------ \n";
