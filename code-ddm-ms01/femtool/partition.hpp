@@ -132,34 +132,17 @@ Partition4(const Mesh2D& Omega, const std::size_t& nl)
         else                {  if (Point[1]<0.5)    {noeuds_partition[2].push_back(Point);}
                                 else                {noeuds_partition[3].push_back(Point);}}
     }
-    std::cout<<"\n ------------------------ \n";
-    std::cout<<" le maillage possede "<<noeuds_partition[0].size()<<" noeuds et "<<Meshes[0].size()<<" elements ";
-    std::cout<<"\n adding the "<<1<<" overlap of the "<<1<<"'s mesh  \n";
-    Meshes[0]= overlap(Omega,Meshes[0]);
+    for(int k=0; k<int(nl);k++){
 
-    std::cout<<" le maillage possede "<<noeuds_partition[0].size()<<" noeuds et "<<Meshes[0].size()<<" elements ";
+      for(int p =0; p<4;p++){ // à chaque maillage p 
 
-    std::cout<<"\n adding the "<<2<<" overlap of the "<<1<<"'s mesh  \n";
-    Meshes[0]= overlap(Omega,Meshes[0]);
+      // ajoute tout les elements qui possède un point en commun avec noeuds_partition
+      std::cout<<"\n adding the "<<k+1<<" overlap of the "<<p+1<<"'s mesh  \n";
 
-    std::cout<<" le maillage possede "<<noeuds_partition[0].size()<<" noeuds et "<<Meshes[0].size()<<" elements ";
+      Meshes[p] = overlap(Omega,Meshes[p]);
 
-    std::cout<<"\n adding the "<<3<<" overlap of the "<<1<<"'s mesh  \n";
-    Meshes[0]= overlap(Omega,Meshes[0]);
-
-    std::cout<<" le maillage possede "<<noeuds_partition[0].size()<<" noeuds et "<<Meshes[0].size()<<" elements ";
-    std::cout<<"\n ------------------------ \n";
-  //   for(int k=0; k<int(nl);k++){
-
-  //     for(int p =0; p<4;p++){ // à chaque maillage p 
-
-  //     // ajoute tout les elements qui possède un point en commun avec noeuds_partition
-  //     std::cout<<"\n adding the "<<k+1<<" overlap of the "<<p+1<<"'s mesh  \n";
-
-  //     overlap(Omega,Meshes[p]);
-
-  //     }
-  // }
+      }
+  }
 
 
 

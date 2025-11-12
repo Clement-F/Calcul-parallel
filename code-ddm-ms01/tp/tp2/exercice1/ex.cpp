@@ -22,6 +22,6 @@ int main(){
   std::cout<<" \n read \n";
 
   std::pair< Mesh2DPart,CooMatrix<double> > Partition;
-  Partition = Partition4(Omega,1);
+  Partition = Partition4(Omega,10);
   Plot(Partition.first, "partition_mesh");
 }
