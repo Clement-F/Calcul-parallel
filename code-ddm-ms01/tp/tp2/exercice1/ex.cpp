@@ -17,12 +17,12 @@ int main(){
   std::cout<<" \n instantiation \n";
 
   // Loading a 2D mesh
-  Read(Omega,"mesh_brut.mesh");
+  Read(Omega,"mesh_fin.mesh");
   
   std::cout<<" \n read \n";
 
   std::pair< Mesh2DPart,CooMatrix<double> > Partition;
-  Partition = Partition4_ter(Omega);
+  Partition = Partition16(Omega);
   Plot_bis(Partition.first, "partition_mesh");
 
 //   Plot(Vh,ue,"ue");
