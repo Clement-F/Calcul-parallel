@@ -17,16 +17,11 @@ int main(){
   std::cout<<" \n instantiation \n";
 
   // Loading a 2D mesh
-  Read(Omega,"mesh_fin.mesh");
+  Read(Omega,"mesh_brut.mesh");
   
   std::cout<<" \n read \n";
 
   std::pair< Mesh2DPart,CooMatrix<double> > Partition;
-  Partition = Partition16(Omega);
-  Plot_bis(Partition.first, "partition_mesh");
-
-//   Plot(Vh,ue,"ue");
-
-//   // Plotting error with vizir4
-//   Plot(Vh,err,"err");
+  Partition = Partition4(Omega,1);
+  Plot(Partition.first, "partition_mesh");
 }
