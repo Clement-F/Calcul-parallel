@@ -108,6 +108,10 @@ public:
   void push_back(const std::size_t& j,
 		 const std::size_t& k,
 		 const ValueType& v){
+    if ( (j>=nr) || (k>=nc)) {
+      std::cout << "j = " << j << "; nr = " << nr << std::endl;
+      std::cout << "k = " << k << "; nc = " << nc << std::endl;
+    }
     assert( (j<nr) && (k<nc) );
     data_ptr->emplace_back(j,k,v);}
   
