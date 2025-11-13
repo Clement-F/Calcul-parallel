@@ -6,6 +6,9 @@
 #include <filesystem>
 
 using Mesh2DPart = std::vector<Mesh2D>;
+// ========================== meme noeuds ===========================
+
+
 
 std::pair< Mesh2DPart,CooMatrix<double> >
 Partition4(const Mesh2D& Omega)
@@ -19,78 +22,23 @@ Partition4(const Mesh2D& Omega)
     for(int j=0; j<sz; ++j){for(int k=0;k<4;k++){
         Q.push_back(j,k,0.);}}
 
-    int coord =0;
-    std::cout<<"\n begin first loop \n";
-    auto nodes= Omega.nodes(); std::vector<Nodes> Nodes_part(4);
-    for(int i =0;i<int(Omega.nodes().size());i++)
-    {
-        R3 Point = nodes[i];
-        if(Point[0]<0.5)   {  if (Point[1]<0.5)     {Nodes_part[0].push_back(Point);}
-                                else                {Nodes_part[1].push_back(Point);}}
-        else                {  if (Point[1]<0.5)    {Nodes_part[2].push_back(Point);}
-                                else                {Nodes_part[3].push_back(Point);}}
-    }
-
-    for(int i=0; i<4;i++){Meshes[i] = Mesh2D(Nodes_part[i]);}
-
-
-    std::cout<<"\n begin second loop \n";
-    for (auto el = Omega.begin(); el != Omega.end(); ++el)
-    {
-        auto element = *el; 
-        R3 Center = Ctr(element);
-        std::cout<<'\t'<<Center<<'\t';
-        if(Center[0]<0.75)   {  if (Center[1]<0.75)   {Meshes[0].push_back(element); Q.push_back(coord,0,1.);     }
-                                else                {Meshes[1].push_back(element); Q.push_back(coord,1,1.);     }}
-        else                {  if (Center[1]<0.75)   {Meshes[2].push_back(element); Q.push_back(coord,2,1.);     }
-                                else                {Meshes[3].push_back(element); Q.push_back(coord,3,1.);     }}
-        coord++;std::cout<<"\n-----------------\n";
-    }
-    
-    std::cout<<"\n end looping \n";
-    return std::make_tuple(Meshes, Q);
-}
-
-
-
-std::pair< Mesh2DPart,CooMatrix<double> >
-Partition4_bis(const Mesh2D& Omega)
-{  
-    
-    std::cout<<"\n instantiation of meshes \n";
-    Mesh2DPart Meshes(4);   int sz = int(Omega.size());
-
-    std::cout<<"\n creation of Q \n";
-    CooMatrix<double> Q(sz,4);
-    for(int j=0; j<sz; ++j){for(int k=0;k<4;k++){
-        Q.push_back(j,k,0.);}}
-
     double j,k;
-    std::cout<<"\n begin first loop \n";
-    auto nodes= Omega.nodes(); std::vector<Nodes> Nodes_part(4);
-    for(int p =0;p<4;p++)    {
-        j=p/2; k=p%2;
-        for(int i=0;i<int(Omega.nodes().size());i++)
-        {
-        R3 Point = nodes[i];
-        if((Point[0]>j/2 and Point[0]<(j+1)/2)){if(Point[1]>k/2 and Point[1]<(k+1)/2){Nodes_part[p].push_back(Point);};}
-        }
-    }
+    auto nodes_= Omega.nodes();
 
-    for(int i=0; i<4;i++){Meshes[i] = Mesh2D(Nodes_part[i]);}
+    for(int i=0; i<4;i++){Meshes[i] = Mesh2D(nodes_);}
 
-    long int coord=0; 
+    long int coord=0;  
+    double correction = 1.5;
     std::cout<<"\n begin second loop \n";
     for(int p =0;p<4;p++)    {
         j=p/2; k=p%2;
       for (auto el = Omega.begin(); el != Omega.end(); ++el)
       {
-          Element<2> element = *el; 
+          auto element = *el;
           R3 Center = Ctr(element);
-          std::cout<<p<<'\t'<<Center<<'\t'<<j<<','<<k<<'\t';
-          if((Center[0]>j/2 and Center[0]<(j+1)/2) and (Center[1]>k/2 and Center[1]<(k+1)/2)){std::cout<<"passed";Meshes[p].push_back(element); Q.push_back(coord,p,coord+1); }
-          coord++;std::cout<<"\n-----------------\n";
-    }coord =0; 
+          if((Center[0]>(j/2 * correction) and Center[0]<((j+1)/2 * correction)) and (Center[1]>(k/2 * correction) and Center[1]<=((k+1)/2* correction))){Meshes[p].push_back(element); Q.push_back(coord,p,1); }
+          coord++;
+    }
     std::cout<<"\n mesh "<<p<<" has been sorted out \n";}
     
     std::cout<<"\n end looping \n";
@@ -99,10 +47,121 @@ Partition4_bis(const Mesh2D& Omega)
 
 
 
+Mesh2D overlap(const Mesh2D& m_Omega, Mesh2D m_Gamma)
+{
+
+  int sz = int(m_Omega.nodes().size());
+
+  auto nodes_ = m_Omega.nodes();
+  const auto& v0 = nodes_[0];
+
+  std::vector<int> v(sz);
+  int surcharge=0;
+  for(const auto& el:m_Gamma){
+      surcharge ++;
+      if(surcharge>= sz){auto it = unique(v.begin(), v.end());    v.erase(it, v.end());}
+      for(int j=0;j<3;j++){v.push_back(int(&el[j]-&v0));}
+  }
+
+  auto it = unique(v.begin(), v.end());
+  v.erase(it, v.end());
+
+
+  Mesh2D m_new_Gamma(m_Omega.nodes());
+  int i=0; bool not_in = true;
+  for(const auto& el:m_Omega){
+    i=0;
+// --------------------------------------
+    while(i<int(v.size()) and not_in){  
+      for(int j=0;j<3;j++){         
+        if(int(&el[j]-&v0) ==v[i]){        
+          m_new_Gamma.push_back(el); 
+          not_in =false;    
+        } 
+      }     
+      i++;
+    }
+    not_in=true; 
+// -------------------------------------- 
+  }
+  // std::cout<<m_new_Gamma.size();
+  return m_new_Gamma;
+}
+
+
+std::pair< Mesh2DPart,CooMatrix<double> >
+Partition4(const Mesh2D& Omega, const std::size_t& nl)
+{
+  
+    std::cout<<"\n instantiation of meshes \n";
+    Mesh2DPart Meshes(4);   int sz = int(Omega.size());
+
+    std::cout<<"\n creation of R \n";
+    CooMatrix<double> R(sz,4);
+    for(int j=0; j<sz; ++j){for(int k=0;k<4;k++){
+        R.push_back(j,k,0.);}}
+
+    double j,k;
+    auto nodes_= Omega.nodes();
+
+    for(int i=0; i<4;i++){Meshes[i] = Mesh2D(nodes_);}
+
+    long int coord=0;  long int decalage=1;
+    double correction = 1.5;
+    std::cout<<"\n begin second loop \n";
+    for(int p =0;p<4;p++)    {
+        j=p/2; k=p%2;
+      for (auto el = Omega.begin(); el != Omega.end(); ++el)
+      {
+          auto element = *el;
+          R3 Center = Ctr(element);
+          if((Center[0]>(j/2 * correction) and Center[0]<((j+1)/2 * correction)) and (Center[1]>(k/2 * correction) and Center[1]<=((k+1)/2* correction))){Meshes[p].push_back(element); R.push_back(coord,p,coord+decalage); }
+          coord++;
+    }decalage += coord; coord =0;
+    std::cout<<"\n mesh "<<p<<" has been sorted out \n";}
+
+    std::vector<Nodes> noeuds_partition(4);
+
+    
+    // tout les points sur lesquels se trouve les elements du maillage p
+    for(int i =0;i<int(nodes_.size());i++)
+    {
+        R3 Point = nodes_[i];
+        if(Point[0]<0.5)   {  if (Point[1]<0.5)     {noeuds_partition[0].push_back(Point);}
+                                else                {noeuds_partition[1].push_back(Point);}}
+        else                {  if (Point[1]<0.5)    {noeuds_partition[2].push_back(Point);}
+                                else                {noeuds_partition[3].push_back(Point);}}
+    }
+    for(int k=0; k<int(nl);k++){
+
+      for(int p =0; p<4;p++){ // à chaque maillage p 
+
+      // ajoute tout les elements qui possède un point en commun avec noeuds_partition
+      std::cout<<"\n adding the "<<k+1<<" overlap of the "<<p+1<<"'s mesh  \n";
+
+      Meshes[p] = overlap(Omega,Meshes[p]);
+
+      }
+  }
+
+
+
+    std::cout<<"\n end looping \n";
+    return std::make_tuple(Meshes, R);
+}
+
+
 std::pair< Mesh2DPart,CooMatrix<double> >
 Partition16(const Mesh2D& Omega)
 {  
     
+
+
+    std::vector<bool> sorted(Omega.nodes().size(), false);
+    std::vector<bool> mesh_sorted(Omega.size(), false);
+    long int el_sorted=0; 
+
+    double correction = 2./3;
     std::cout<<"\n instantiation of meshes \n";
     Mesh2DPart Meshes(16);   int sz = int(Omega.size());
 
@@ -113,17 +172,10 @@ Partition16(const Mesh2D& Omega)
 
     double j,k;
     std::cout<<"\n begin first loop \n";
-    auto nodes= Omega.nodes(); std::vector<Nodes> Nodes_part(16);
-    for(int p =0;p<16;p++)    {
-        j=p/4; k=p%4;
-        for(int i=0;i<int(Omega.nodes().size());i++)
-        {
-        R3 Point = nodes[i];
-        if((Point[0]>j/4 and Point[0]<(j+1)/4)){if(Point[1]>k/4 and Point[1]<(k+1)/4){Nodes_part[p].push_back(Point);};}
-        }
-    }
 
-    for(int i=0; i<16;i++){Meshes[i] = Mesh2D(Nodes_part[i]);}
+    auto nodes_= Omega.nodes();
+    for(int i=0; i<16;i++){Meshes[i] = Mesh2D(nodes_);}
+
 
     long int coord=0; 
     std::cout<<"\n begin second loop \n";
@@ -131,34 +183,22 @@ Partition16(const Mesh2D& Omega)
         j=p/4; k=p%4;
       for (auto el = Omega.begin(); el != Omega.end(); ++el)
       {
-          Element<2> element = *el; 
+        // if(not mesh_sorted[coord]){
+          auto element = *el; 
           R3 Center = Ctr(element);
-          std::cout<<p<<'\t'<<Center<<'\t'<<j<<','<<k<<'\t';
-          if((Center[0]>j/4 and Center[0]<(j+1)/4) and (Center[1]>k/4 and Center[1]<(k+1)/4)){std::cout<<"passed";Meshes[p].push_back(element); Q.push_back(coord,p,coord+1); }
-          coord++;std::cout<<"\n-----------------\n";
-    }coord =0; 
-    std::cout<<"\n mesh "<<p<<" has been sorted out \n";}
+        //   std::cout<<p<<'\t'<<Center<<'\t'<<j<<','<<k<<'\t';
+          if(Center[0]*correction>j/4 and Center[0]*correction<(j+1)/4){if(Center[1]*correction>k/4 and Center[1]*correction<(k+1)/4){Meshes[p].push_back(element); Q.push_back(coord,p,1);}}                    
+        // std::cout<<"\n-----------------\n";
+        // }
+        coord++;
+    }
+    el_sorted = std::count(mesh_sorted.begin(), mesh_sorted.end(), true);
+    std::cout<<"\n mesh "<<p<<" has been sorted out \n";std::cout<<el_sorted<<" element have been sorted so far out of "<<sz<<'\n';
+}
     
     std::cout<<"\n end looping \n";
     return std::make_tuple(Meshes, Q);
 }
-
-
-
-
-
-
-
-
-int 
-find_index(const SmallVector<double,3>& ei, const Nodes& Nodes_) // brutefoooooooorce
-{
-    for(int i=0; i<int(Nodes_.size()); i++){
-        if(Close(Nodes_[i],ei)){return i; };
-    }
-    return -1;
-}
-
 
 void
 Plot(const std::vector<Mesh2D>& Sigma,const std::string& filename)
@@ -178,25 +218,22 @@ Plot(const std::vector<Mesh2D>& Sigma,const std::string& filename)
 
     std::cout<<"\n view sizes \n";
 
-  int vert_size=0; int el_size=0;
-  std::vector<Nodes> N(Sigma.size()); 
-  for(int i=0;i< int(Sigma.size());i++){
-    N[i] = (Sigma[i].nodes());  vert_size += N[i].size();  el_size += Sigma[i].size();} 
 
-    std::cout<<"\n begin first looping \n";
+  auto nodes_ = Sigma[0].nodes();
+  const auto& v0 = nodes_[0];
+  int el_size=0; 
+  for(int i=0;i< int(Sigma.size());i++){el_size += Sigma[i].size();} 
+
+  std::cout<<"\n begin first looping \n";
 
     
   // Section noeuds
   f << "Vertices\n";
-  f << vert_size << "\n";
+  f << nodes_.size() << "\n";
   int k = 0;
-  for(int i=0;i<int(Sigma.size());i++)
-  {
 //   auto v = Sigma[i].nodes();
-  for(const auto& x:N[i]){
-
-    f << x << "\t"<<i+1<<"\n"; k++;}
-  }
+  for(const auto& x:nodes_){f << x << "\t"<<1<<"\n"; k++;}
+  
   f << "\n";
 
   
@@ -206,29 +243,25 @@ Plot(const std::vector<Mesh2D>& Sigma,const std::string& filename)
   f << tag[2]   << "\n";
   f << el_size << "\n";
   
-  int index, temp, decalage;
-
   for(int i=0;i<int(Sigma.size());i++)
   {
   std::cout<<"\n the elements from mesh "<<i<<" have been plotted \n";
   for(const auto& e:Sigma[i]){
     for(std::size_t j=0; j<2+1; ++j){
-
-        index = 0;      temp=0; 
-        decalage = 0;   k=0;
-        while(index ==0 && k<int(Sigma.size()))
-            { 
-            temp = find_index(e[j],N[k]); 
-            if(temp!=-1){index = temp + decalage;}; 
-            decalage += N[k].size(); 
-            k++;
-            }
-
-        f << 1+ index << "\t";}
-    f <<i+1<< "\n";}
+      f << 1+int(&e[j]-&v0) << "\t";}
+    f <<i+1 <<'\n';}
     }
+  
   // Fermeture
   f << "\nEnd";
   f.close();
   
 }
+
+
+using FeSpace2D = FeSpace<2>;
+using FeSpace2DxCoo = std::pair<FeSpace2D,CooMatrix<double>>;
+
+FeSpace2DxCoo
+Restrict(const FeSpace2D& Vh,const Mesh2D& Gamma,const std::vector<std::size_t>& tbl);
+

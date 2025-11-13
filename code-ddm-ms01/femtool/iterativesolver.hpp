@@ -11,7 +11,9 @@
 
 std::vector<double>
 cgsolve(const CooMatrix<double>&   A,
-	const std::vector<double>& b, const int& k=1000) {
+	const std::vector<double>& b, const int& k_temp=1000) {
+    
+  std::size_t k =  std::size_t(k_temp);
     
   assert((NbCol(A)==NbRow(A)) &&
 	 (b.size()==NbCol(A)) );
@@ -88,8 +90,10 @@ cgsolve(const CooMatrix<double>&   A,
 
 std::vector<double>
 PCGSolver(const CooMatrix<double>&   A, const std::vector<double>& b, 
-  const int& k=1000, const double& epsi=10e-6)
+  const int& k_temp=1000, const double& epsi=10e-6)
 {
+
+  std::size_t k =  std::size_t(k_temp);
 
   CholeskyPrec Q(A);
   auto    x   = std::vector<double>(b.size(),0.);
