@@ -8,6 +8,8 @@
 #include <utility>
 
 using Mesh2DPart = std::vector<Mesh2D>;
+using FeSpace2D = FeSpace<2>;
+using FeSpace2DxCoo = std::pair<FeSpace2D, CooMatrix<double>>;
 
 int 
 find_index(const SmallVector<double,3>& ei, const Nodes& Nodes_)
@@ -278,7 +280,7 @@ std::pair<Mesh2DPart, CooMatrix<double>>
     return make_pair(Gamma, R);
  }
 
- void
+void
 Plot(const std::vector<Mesh2D>& Sigma, const std::string& filename) {
     std::filesystem::path file = std::filesystem::path(filename);
     std::vector<std::string> tag = {"Vertices", "Edges", "Triangles", "Tetrahedra"};
@@ -339,3 +341,113 @@ Plot(const std::vector<Mesh2D>& Sigma, const std::string& filename) {
     f << "End";
     f.close();
 }
+
+
+FeSpace2DxCoo 
+ Restrict(const FeSpace2D& Vh, const Mesh2D& Gamma, const std::vector<std::size_t>& tbl) {
+
+    // Espace élément fini Uh
+    FeSpace2D Uh(Gamma);
+
+    // Maillages
+    const auto& Omega = Vh.mesh();
+    const auto& noeudsOmega = Omega.nodes();
+    const auto& noeudsGamma = Gamma.nodes();
+
+    // Construction de l'indexage global -> local
+    std::vector<int> Gamma2Omega(noeudsGamma.size(), -1);
+    for (std::size_t k=0; k<Gamma.size(); ++k) {
+        auto& elemGamma = Gamma[k];
+        auto& elemOmega = Omega[tbl[k]];
+        for (int v=0; v<3; ++v) {
+            int idGamma = find_index(elemGamma[v], noeudsGamma); // indice du v-ème sommet de Gamma
+            int idOmega = find_index(elemOmega[v], noeudsOmega); // indice du v-ème sommet correspondant
+            Gamma2Omega[idGamma] = idOmega;
+        }        
+    }
+
+    // Construction de P
+    std::size_t nUh = dim(Uh);
+    std::size_t nVh = dim(Vh);
+    CooMatrix<double> P(nUh, nVh);
+    // Éléments de Uh
+    for (std::size_t k=0; k<Uh.size(); ++k) {
+        auto& cell = Uh[k];
+        for (std::size_t loc=0; loc<3; ++loc) {
+            std::size_t dofU = cell[loc]; // dof global dans Uh
+            std::size_t noeudGamma = loc; // indice du noeud local dans Gamma
+            int noeud0 = Gamma2Omega[noeudGamma]; // on retrouve quel noeud d'Omega correspond à ce noeud de Omega
+            if (noeud0 < 0) {
+                continue; // si pas de correspondance on peut sauter ce noeud (Gamma2Omega initialisée à -1)
+            }
+
+            // Éléments de Vh: on cherche dans Vh quel DoF correspond à noeud0
+            for (std::size_t l=0; l<Vh.size(); ++l) {
+                auto& cell2 = Vh[l];
+                for (std::size_t loc2=0; loc2<3; ++loc2) {
+                    if (Close(Omega[l][loc2], noeudsOmega[noeud0])) {
+                        std::size_t dofV = cell2[loc2]; // numéro de dof dans Vh pour ce noeud
+                        P.push_back(dofU, dofV, 1.0);
+                    }
+                }
+            }
+        }
+    }
+    return std::make_pair(Uh, P);
+}
+
+std::vector<FeSpace2DxCoo> 
+ Partition4(const FeSpace2D& Vh, const std::size_t& nl) {
+
+    Mesh2D Omega = Vh.mesh();
+    auto [Sigma, Q] = Partition4(Omega, nl);
+
+    std::vector<std::vector<std::size_t>> tbl_global(Sigma.size());
+    for (std::size_t p=0; p<Sigma.size(); ++p) {
+        tbl_global[p].resize(Sigma[p].size());
+        for (std::size_t j=0; j<Sigma[p].size(); ++j) {
+            auto& elemSigma = Sigma[p][j];
+            for (std::size_t k=0; k<Omega.size(); ++k) {
+                if (elemSigma == Omega[k]) {
+                    tbl_global[p][j] = k;
+                    break;
+                }
+            }
+        }
+    }
+
+    std::vector<FeSpace2DxCoo> UP(Sigma.size());
+    for (std::size_t p=0; p<Sigma.size(); ++p) {
+        UP[p] = Restrict(Vh, Sigma[p], tbl_global[p]);
+    }
+    return UP;
+}
+
+
+std::vector<FeSpace2DxCoo> 
+ Partition16(const FeSpace2D& Vh, const std::size_t& nl) {
+
+    Mesh2D Omega = Vh.mesh();
+    auto [Sigma, Q] = Partition4(Omega, nl);
+
+    std::vector<std::vector<std::size_t>> tbl_global(Sigma.size());
+    for (std::size_t p=0; p<Sigma.size(); ++p) {
+        tbl_global[p].resize(Sigma[p].size());
+        for (std::size_t j=0; j<Sigma[p].size(); ++j) {
+            auto& elemSigma = Sigma[p][j];
+            for (std::size_t k=0; k<Omega.size(); ++k) {
+                if (elemSigma == Omega[k]) {
+                    tbl_global[p][j] = k;
+                    break;
+                }
+            }
+        }
+    }
+
+    std::vector<FeSpace2DxCoo> UP(Sigma.size());
+    for (std::size_t p=0; p<Sigma.size(); ++p) {
+        UP[p] = Restrict(Vh, Sigma[p], tbl_global[p]);
+    }
+    return UP;
+}
+

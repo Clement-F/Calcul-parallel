@@ -113,7 +113,7 @@ std::vector<double> PCGSolver(const CooMatrix<double>& A, const std::vector<doub
   double alpha,beta,pAp;
     
   int niter = 0;
-  while ((r2>eps2 && niter++<1000) & niter<k) {
+  while (r2>eps2 && niter++<1000 && niter<k) {
     Ap = A*p;
     pAp = std::real((p|Ap));
     alpha = (r|z)/pAp;
