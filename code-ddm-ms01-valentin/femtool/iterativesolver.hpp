@@ -25,7 +25,8 @@ cgsolve(const CooMatrix<double>&   A,
   eps2       *= std::abs((b|b));      
   double alpha,beta,pAp;
     
-  std::size_t niter = 0;    
+  //std::size_t niter = 0;    
+  int niter = 0;
   //while( (r2>eps2 && niter++<1000) && niter<=k){
   //while(r2>eps2 && niter<=k){
   while( niter++<1000 && niter<=k){
@@ -68,7 +69,7 @@ cgsolve_modifie(const CooMatrix<double>&   A,
   eps2       *= std::abs((b|b));      
   double alpha,beta,pAp;
     
-  std::size_t niter = 0;    
+  int niter = 0;    
   //while( (r2>eps2 && niter++<1000) && niter<=k){
   //while(r2>eps2 && niter<=k){
   while( niter++<1000 && niter<=k){
@@ -111,8 +112,8 @@ std::vector<double> PCGSolver(const CooMatrix<double>& A, const std::vector<doub
   eps2 *= std::abs((b|b));      
   double alpha,beta,pAp;
     
-  std::size_t niter = 0;
-  while ((r2>eps2 && niter++<1000) & niter<k) {
+  int niter = 0;
+  while (r2>eps2 && niter++<1000 && niter<k) {
     Ap = A*p;
     pAp = std::real((p|Ap));
     alpha = (r|z)/pAp;
