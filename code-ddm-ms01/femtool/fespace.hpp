@@ -79,7 +79,7 @@ public:
     for(std::size_t j=0; j<DIM+1; ++j){
       kk=0;
       for(std::size_t k=0; k<DIM+1; ++k){
-	if(k!=DIM-j){f[j][kk++] = c[k];}
+	    if(k!=DIM-j){f[j][kk++] = c[k];}
       }
     }
     return f;
@@ -307,7 +307,7 @@ void Plot(const FeSpace<DIM>&             Vh,
 
 template <std::size_t DIM>
 auto Boundary(const FeSpace<DIM>& Vh,
-	      const std::tuple<Mesh<DIM-1>,std::vector<std::size_t>>& Gamma_x_tbl){
+	            const std::tuple<Mesh<DIM-1>,std::vector<std::size_t>>& Gamma_x_tbl){
 
   const auto& [Gamma,tbl] = Gamma_x_tbl;
   auto Wh = FeSpace(Gamma);

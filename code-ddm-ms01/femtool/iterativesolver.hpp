@@ -11,10 +11,10 @@
 
 std::vector<double>
 cgsolve(const CooMatrix<double>&   A,
-	const std::vector<double>& b, const int& k_temp=1000) {
+	const std::vector<double>& b, 
+  const int& k_temp=1000, const double& epsi=1e-06) {
     
-  std::size_t k =  std::size_t(k_temp);
-    
+  std::size_t k =  std::size_t(k_temp);    
   assert((NbCol(A)==NbRow(A)) &&
 	 (b.size()==NbCol(A)) );
  
@@ -28,7 +28,8 @@ cgsolve(const CooMatrix<double>&   A,
   double alpha,beta,pAp;
     
   std::size_t niter = 0;    
-  while(( r2>eps2 && niter++<1000) && niter<k){
+  // while((r2>eps && r2>eps2 )&& (niter<1000 && niter<k)){
+  while((niter<k && r2>epsi)){
       
     Ap    = A*p;
     pAp   = std::real((Ap|p));    
@@ -41,50 +42,15 @@ cgsolve(const CooMatrix<double>&   A,
       
     if((niter%50)==0){
       std::cout << std::left << std::setw(7) << niter << "\t";
-      std::cout << Norm(r) << std::endl;
+      std::cout << Norm(r) << '\t' << r2<< std::endl;
     }
-      
+    
+    niter++;
   }
     
   return x;
     
 }
-
-// std::vector<double>
-// PCGSolver(const CooMatrix<double>&   A, const CooMatrix<double>&   Q, const std::vector<double>& b, 
-//   const int& k=1000, const double& epsi=10e-6)
-// {
-//   auto    x   = std::vector<double>(b.size(),0.);
-//   auto    r   = b - A*x;
-//   auto    z   = Q*r;
-//   auto    p   = z;
-//   auto   Ap   = A*p;   
-
-//   auto r_prec = r;  auto z_prec = z;
-//   double alpha, beta;
-//   double r2   = std::pow(Norm(r),2);  
-
-//   std::size_t niter = 0;  
-//   while((r2>epsi && niter++<1000) && niter<k)
-//   {
-//     r_prec = r; z_prec = z;
-//     Ap   = A*p;  
-//     alpha = (r|z)/(p|Ap);
-//     x     = x + alpha*p;
-//     r     = r - alpha*Ap;
-//     z     = Q*r;
-//     beta  = (r|z)/(r_prec|z_prec);
-//     p     = z + beta*p; 
-//     r2    = std::pow(Norm(r),2);
-    
-//     if((niter%50)==0){
-//       std::cout << std::left << std::setw(7) << niter << "\t";
-//       std::cout << Norm(r) << std::endl;
-//     }
-//   }
-//   return x;
-    
-// }
 
 
 

@@ -3,11 +3,11 @@ FLAGS=-O3
 INC=-I../../../eigen/ -I../../../femtool/
 
 
-ex: ex.o
-	$(GCC) $(FLAGS) ex.o -o ex
+tp2-exo1: tp2-exo1.o
+	$(GCC) $(FLAGS) tp2-exo1.o -o tp2-exo1
 
-ex.o: ex.cpp
-	$(GCC) $(FLAGS) $(INC) -c ex.cpp -o ex.o
+tp2-exo1.o: tp2-exo1.cpp
+	$(GCC) $(FLAGS) $(INC) -c tp2-exo1.cpp -o tp2-exo1.o
 
 clean:
 	rm *.o

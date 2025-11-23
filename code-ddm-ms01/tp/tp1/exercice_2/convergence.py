@@ -35,3 +35,18 @@ ax.legend()
 plt.tight_layout()
 plt.savefig("convergence.png")
 
+
+
+fig, ax = plt.subplots(figsize=(6,4), dpi=250)
+
+conv = [31,71,106,136]
+h = [0.025,0.01,0.005,0.0025]
+ax.plot(h,conv, '-o', label="nombre d'iteration")
+ax.set_xlabel('$h$ finesse de maille')
+ax.set_ylabel('iterations avant convergence')
+ax.grid()
+ax.legend()
+plt.tight_layout()
+plt.savefig("iterations.png")
+
+

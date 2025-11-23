@@ -96,7 +96,7 @@ public:
     for(std::size_t j=0; j<NbRow(m); ++j){
       for(std::size_t k=0; k<NbCol(m); ++k){
 	o << std::setw(10) << std::showpos << std::left;
-	o << m[j,k] << "\t";}
+	o <<'\t'<<j<<','<<k <<','<< m[j,k]<< "\t";}
       o << "\n";
     }
     return o;
